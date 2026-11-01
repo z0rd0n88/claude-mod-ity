@@ -1,0 +1,12 @@
+{
+  "name": "claude-mod-ity",
+  "description": "Claude Code mods. They are commodities.",
+  "owner": { "name": "Alex Fielder" },
+  "plugins": [
+    {
+      "name": "mod-divider",
+      "source": "./mods/mod-divider",
+      "description": "Draws a divider line, in a character you choose, between the bands other mods show above the prompt."
+    }
+  ]
+}

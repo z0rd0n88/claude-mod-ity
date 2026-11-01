@@ -1,5 +1,5 @@
 {
-  "name": "band-divider",
+  "name": "mod-divider",
   "version": "0.1.0",
   "description": "Draws a customizable divider line between the bands other mods show above the prompt.",
   "userConfig": {
