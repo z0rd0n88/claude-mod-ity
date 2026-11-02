@@ -110,6 +110,15 @@ describe('mod-divider', () => {
     expect(await ui.find({ type: 'Text', text: /^-+$/ })).toBeUndefined()
   })
 
+  test('whitespace alone counts as a bare /mod-divider', async ($, on) => {
+    const { store, run } = await start($, on)
+    const ui = await mount($)
+    store.set('config', { enabled: false, char: '-', length: null, align: 'center' })
+
+    expect(await run('  ')).toContain('mod-divider is off')
+    expect(await ui.find({ type: 'Text', text: /^-+$/ })).toBeUndefined()
+  })
+
   test('a rejected command leaves the drawn line alone, as its reply says, after another session changed the store', async ($, on) => {
     const { store, run } = await start($, on)
     const ui = await mount($)

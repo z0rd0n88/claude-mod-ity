@@ -35,7 +35,7 @@ export const register: Register = (on) => {
     const loaded = loadConfig(await $.store.get('config'))
     const result = runCommand(loaded, e.args, width)
     if (result.config) await $.store.set('config', result.config)
-    // A rejected call leaves everything alone, as its reply says.
+    // A rejected call, an unknown subcommand included, changes nothing.
     if (!result.config && e.args.trim() !== '') return { text: result.text }
     const latest = result.config ?? loaded
     // A bare call refreshes too, so what it reports is what this session draws unless a hook denies the write. A failure
