@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { checkChar, DEFAULT_CONFIG, loadConfig, runCommand } from '../hooks/config'
+import { checkChar, cellWidth, DEFAULT_CONFIG, dividerText, loadConfig, runCommand } from '../hooks/config'
 
 const ACCEPTED: [string, string][] = [
   ['dash', '-'],
@@ -83,44 +83,156 @@ describe('checkChar', () => {
 })
 
 describe('loadConfig', () => {
-  test('nothing stored gives on and a dash', () => {
-    expect(loadConfig(undefined)).toEqual({ enabled: true, char: '-' })
-    expect(DEFAULT_CONFIG).toEqual({ enabled: true, char: '-' })
+  test('nothing stored gives on, a dash and the full width', () => {
+    expect(loadConfig(undefined)).toEqual({ enabled: true, char: '-', length: null })
+    expect(DEFAULT_CONFIG).toEqual({ enabled: true, char: '-', length: null })
   })
 
   test('keeps a valid config', () => {
-    expect(loadConfig({ enabled: false, char: '🔥' })).toEqual({ enabled: false, char: '🔥' })
-    expect(loadConfig({ enabled: true, char: ' ' })).toEqual({ enabled: true, char: ' ' })
+    expect(loadConfig({ enabled: false, char: '🔥', length: 40 })).toEqual({ enabled: false, char: '🔥', length: 40 })
+    expect(loadConfig({ enabled: true, char: ' ' })).toEqual({ enabled: true, char: ' ', length: null })
+  })
+
+  test('a config saved before length existed keeps its values', () => {
+    expect(loadConfig({ enabled: false, char: '=' })).toEqual({ enabled: false, char: '=', length: null })
   })
 
   test('a hand-edited store cannot get a bad value drawn', () => {
-    for (const saved of [null, 7, 'x', [], {}, { char: 7 }, { enabled: 'no' }, { char: '\x1b[31m' }, { char: '--' }, { char: '' }]) {
-      expect(loadConfig(saved)).toEqual({ enabled: true, char: '-' })
+    for (const saved of [null, 7, 'x', [], ['a'], {}, { char: 7 }, { enabled: 'no' }, { char: '\x1b[31m' }, { char: '--' }, { char: '' }]) {
+      expect(loadConfig(saved)).toEqual(DEFAULT_CONFIG)
     }
-    expect(loadConfig({ enabled: false, char: '\n' })).toEqual({ enabled: false, char: '-' })
+    expect(loadConfig({ enabled: false, char: '\n' })).toEqual({ enabled: false, char: '-', length: null })
+    for (const length of [0, -1, 1.5, 1001, '40', null, true, {}, Number.MAX_SAFE_INTEGER]) {
+      expect(loadConfig({ length }).length).toBeNull()
+    }
+  })
+})
+
+describe('cellWidth', () => {
+  const cases: [string, number][] = [
+    ['-', 1],
+    [' ', 1],
+    ['é', 1],
+    ['─', 1],
+    ['©', 1],
+    ['語', 2],
+    ['한', 2],
+    ['Ａ', 2],
+    ['🔥', 2],
+    ['❤️', 2],
+    ['👍🏽', 2],
+    ['🇺🇸', 2],
+    ['👨‍👩‍👧', 2],
+  ]
+  for (const [char, cells] of cases) {
+    test(`${char} takes ${cells}`, () => {
+      expect(cellWidth(char)).toBe(cells)
+    })
+  }
+})
+
+describe('dividerText', () => {
+  const config = (length: number | null, char = '-') => ({ enabled: true, char, length })
+
+  test('no length keeps the line far wider than any panel, for the Text to cut', () => {
+    expect(dividerText(config(null), 80)).toBe('-'.repeat(1000))
+    expect(dividerText(config(null, '🔥'), 80)).toBe('🔥'.repeat(1000))
+  })
+
+  test('a blank line at full width is exactly the panel wide, so no ellipsis shows', () => {
+    expect(dividerText(config(null, ' '), 80)).toBe(' '.repeat(80))
+  })
+
+  test('a length under the panel draws that many columns', () => {
+    expect(dividerText(config(1), 80)).toBe('-')
+    expect(dividerText(config(40), 80)).toBe('-'.repeat(40))
+    expect(dividerText(config(79), 80)).toBe('-'.repeat(79))
+  })
+
+  test('a wide character rounds down, so an odd length never overshoots', () => {
+    expect(dividerText(config(10, '🔥'), 80)).toBe('🔥'.repeat(5))
+    expect(dividerText(config(9, '🔥'), 80)).toBe('🔥'.repeat(4))
+  })
+
+  test('a length too short for a wide character still draws one', () => {
+    expect(dividerText(config(1, '🔥'), 80)).toBe('🔥')
+  })
+
+  test('a panel narrower than the saved length gets a line that stops at its edge', () => {
+    expect(dividerText(config(60), 40)).toBe('-'.repeat(1000))
+    expect(dividerText(config(60), 60)).toBe('-'.repeat(1000))
+    expect(dividerText(config(60, ' '), 40)).toBe(' '.repeat(40))
   })
 })
 
 describe('runCommand', () => {
-  const on = { enabled: true, char: '-' }
-  const off = { enabled: false, char: '🔥' }
+  const on = { enabled: true, char: '-', length: null }
+  const off = { enabled: false, char: '🔥', length: null }
 
   test('on and off change only the switch', () => {
-    expect(runCommand(off, 'on').config).toEqual({ enabled: true, char: '🔥' })
-    expect(runCommand(on, 'off').config).toEqual({ enabled: false, char: '-' })
+    expect(runCommand(off, 'on').config).toEqual({ enabled: true, char: '🔥', length: null })
+    expect(runCommand(on, 'off').config).toEqual({ enabled: false, char: '-', length: null })
+  })
+
+  test('length sets columns under the panel, at the boundary included', () => {
+    expect(runCommand(on, 'length 1', 80).config?.length).toBe(1)
+    expect(runCommand(on, 'length 40', 80).config?.length).toBe(40)
+    const top = runCommand(on, 'length 79', 80)
+    expect(top.config?.length).toBe(79)
+    expect(top.text).not.toContain('shortened')
+  })
+
+  test('length at or over the panel is clamped to one under it, with a note', () => {
+    for (const args of ['length 80', 'length 81', 'length 99999', `length ${'9'.repeat(400)}`]) {
+      const result = runCommand(on, args, 80)
+      expect(result.config?.length).toBe(79)
+      expect(result.text).toContain('shortened')
+    }
+  })
+
+  test('with no panel width known, length is only held to the ceiling', () => {
+    expect(runCommand(on, 'length 500').config?.length).toBe(500)
+    expect(runCommand(on, 'length 99999').config?.length).toBe(1000)
+  })
+
+  test('a panel too narrow to fit a shorter line still gets a usable length', () => {
+    expect(runCommand(on, 'length 5', 1).config?.length).toBe(1)
+  })
+
+  test('length full goes back to the default', () => {
+    expect(runCommand({ ...on, length: 40 }, 'length full', 80).config).toEqual(on)
+  })
+
+  test('length keeps the other settings', () => {
+    expect(runCommand(off, 'length 40', 80).config).toEqual({ enabled: false, char: '🔥', length: 40 })
+    expect(runCommand({ ...on, length: 40 }, 'set =', 80).config).toEqual({ enabled: true, char: '=', length: 40 })
+  })
+
+  test('a length that is not a positive whole number changes nothing and says why', () => {
+    for (const args of ['length', 'length ', 'length 0', 'length 00', 'length 010', 'length -5', 'length +5', 'length 1.5', 'length 1e3', 'length abc', 'length 5 5', 'length Infinity', 'length ٥', 'length FULL', 'length \x1b[31m']) {
+      const result = runCommand({ ...on, length: 40 }, args, 80)
+      expect(result.config).toBeUndefined()
+      expect(result.text).toContain('Nothing changed.')
+      expect(result.text).not.toContain('\x1b')
+    }
+  })
+
+  test('no arguments reports the length', () => {
+    expect(runCommand(on, '').text).toContain('length: full')
+    expect(runCommand({ ...on, length: 40 }, '').text).toContain('length: 40')
   })
 
   test('no arguments reports the state and changes nothing', () => {
     expect(runCommand(on, '').config).toBeUndefined()
     expect(runCommand(on, '  ').text).toContain('on, character: -')
     expect(runCommand(off, '').text).toContain('off, character: 🔥')
-    expect(runCommand({ enabled: true, char: ' ' }, '').text).toContain('character: space')
+    expect(runCommand({ enabled: true, char: ' ', length: null }, '').text).toContain('character: space')
   })
 
   test('set changes only the character, on or off', () => {
-    expect(runCommand(on, 'set 🔥').config).toEqual({ enabled: true, char: '🔥' })
+    expect(runCommand(on, 'set 🔥').config).toEqual({ enabled: true, char: '🔥', length: null })
     const result = runCommand(off, 'set =')
-    expect(result.config).toEqual({ enabled: false, char: '=' })
+    expect(result.config).toEqual({ enabled: false, char: '=', length: null })
     expect(result.text).toContain('/mod-divider on')
   })
 
