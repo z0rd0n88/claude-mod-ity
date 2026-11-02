@@ -8,15 +8,18 @@ const ALIGNS: readonly unknown[] = ['left', 'center', 'right'] satisfies Align[]
 const MAX_LENGTH = 32
 
 // Far wider than any panel: the Text cuts it at the panel's edge, whatever the font's glyph width. Also the longest
-// length kept, for when the panel's width is not known yet.
+// length kept.
 const WIDE = 1000
 
 const graphemes = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
 
 // An allowlist, so control, format, separator, private-use and unassigned code points and lone marks are out by not
-// being listed. U+2800 is a symbol that draws blank, and the only blank this mod allows is the space.
+// being listed. U+2800, U+303F, U+FFFC and U+1D159 are symbols that may draw blank, and the only blank this mod allows
+// is the space.
+// Hangul vowel and final jamo and the filler mark U+16FE4 can take no column in a terminal, but the layout counts one.
+// NFC has already composed the jamo that make a syllable.
 // Built from strings because the types' TypeScript target rejects a literal with the v flag, which the engine runs.
-const TEXT = new RegExp(String.raw`^[[\p{L}\p{N}\p{P}\p{S}]--[\p{Default_Ignorable_Code_Point}\u2800]][\p{M}--\p{Default_Ignorable_Code_Point}]{0,3}$`, 'v')
+const TEXT = new RegExp(String.raw`^[[\p{L}\p{N}\p{P}\p{S}]--[\p{Default_Ignorable_Code_Point}\u{303f}\u{fffc}\u{1d159}\u2800\u{1161}-\u{11ff}\u{d7b0}-\u{d7ff}]][\p{M}--[\p{Default_Ignorable_Code_Point}\u{16fe4}]]{0,3}$`, 'v')
 const EMOJI = new RegExp(String.raw`^\p{RGI_Emoji}$`, 'v')
 
 const ONE_CHARACTER = 'Use exactly one character, for example - or 🔥, or the word space for a blank line.'
@@ -47,8 +50,9 @@ export function loadConfig(saved: unknown): Config {
 }
 
 // ponytail: the engine has no width helper, so this estimates: emoji and East Asian wide ranges take 2. A wrong guess
-// only makes a line a little short, or lets the Text cut it at the edge with an ellipsis. A real table if that shows.
-const WIDE_TEXT = /^[\p{Emoji_Presentation}\u1100-\u115f\u2e80-\u303e\u3041-\ua4cf\ua960-\ua97c\uac00-\ud7a3\uf900-\ufaff\ufe30-\ufe6f\uff01-\uff60\uffe0-\uffe6\u{20000}-\u{3fffd}]/u
+// only makes a line a little short or long, or lets the Text cut it at the edge with an ellipsis. A real table if that
+// shows.
+const WIDE_TEXT = /^(?![\u{3248}-\u{324f}\u{1f1e6}-\u{1f1ff}])[\p{Emoji_Presentation}\u1100-\u115f\u2e80-\u303e\u3041-\ua4cf\ua960-\ua97c\uac00-\ud7a3\uf900-\ufaff\ufe30-\ufe6f\uff01-\uff60\uffe0-\uffe6\u{fe10}-\u{fe19}\u{16fe0}-\u{18d08}\u{1aff0}-\u{1b2fb}\u{1f200}-\u{1f265}\u{20000}-\u{3fffd}]/u
 
 /** Terminal columns one allowed character takes. */
 export const cellWidth = (char: string) => (EMOJI.test(char) || WIDE_TEXT.test(char) ? 2 : 1)
@@ -70,10 +74,10 @@ export function dividerText({ char, length, align }: Config, panel: number): str
 const USAGE = 'Usage: /mod-divider on | off | set <character> | length <columns> | length full | align left | center | right'
 const shown = (char: string) => (char === ' ' ? 'space' : char)
 
-function runLength(current: Config, value: string, panel: number | undefined): { config?: Config; text: string } {
+function runLength(current: Config, value: string, panel: number): { config?: Config; text: string } {
   if (value === 'full') return { config: { ...current, length: null }, text: 'mod-divider length: full.' }
   if (!/^[1-9]\d*$/.test(value)) return { text: 'Use a whole number of columns from 1 up, or full. Nothing changed.' }
-  const limit = panel === undefined ? WIDE : Math.max(1, Math.min(panel - 1, WIDE))
+  const limit = Math.max(1, Math.min(panel - 1, WIDE))
   const length = Math.min(Number(value), limit)
   const note = Number(value) > limit ? ', shortened to stay inside the panel' : ''
   return { config: { ...current, length }, text: `mod-divider length: ${length}${note}.` }
@@ -81,9 +85,9 @@ function runLength(current: Config, value: string, panel: number | undefined): {
 
 /**
  * Answers one /mod-divider call. `config` is there only when the call changes the configuration. `panel` is the panel's
- * width in columns, when known.
+ * width in columns.
  */
-export function runCommand(current: Config, args: string, panel?: number): { config?: Config; text: string } {
+export function runCommand(current: Config, args: string, panel: number): { config?: Config; text: string } {
   const command = args.trim()
   if (command === '') {
     const state = `${current.enabled ? 'on' : 'off'}, character: ${shown(current.char)}, length: ${current.length ?? 'full'}, align: ${current.align}`

@@ -16,7 +16,8 @@ export const register: Register = (on) => {
   let panel: number | undefined
 
   on('session.start', async ($, e, next) => {
-    const saved = loadConfig(await $.store.get('config'))
+    // A store file that cannot be read must not cost the session its command, which reports the failure when run.
+    const saved = loadConfig(await $.store.get('config').catch(() => undefined))
     await update($, config, () => saved)
     await $.command.register({
       name: 'mod-divider',
@@ -30,13 +31,13 @@ export const register: Register = (on) => {
     // From the store, not $.state: another open session may have changed it since this one started.
     // Before the first draw, the terminal's width is the closest thing to the panel's.
     const width = panel ?? e.presentation.columns - BAND_MARK
-    const result = runCommand(loadConfig(await $.store.get('config')), e.args, width)
-    if (result.config) {
-      const changed = result.config
-      await $.store.set('config', changed)
-      await update($, config, () => changed)
-    }
-    return { text: result.text }
+    const loaded = loadConfig(await $.store.get('config'))
+    const result = runCommand(loaded, e.args, width)
+    if (result.config) await $.store.set('config', result.config)
+    const latest = result.config ?? loaded
+    // Every call, so what this reports is what this session draws. A failure here is no failed save: the store has it.
+    const note = await update($, config, () => latest).then(() => '', () => (result.config ? ' It applies from the next session.' : ''))
+    return { text: result.text + note }
   }).catch(() => ({ text: 'mod-divider could not read or save its configuration, so nothing changed.' }))
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {

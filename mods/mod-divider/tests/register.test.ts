@@ -14,24 +14,38 @@ const COMMAND = { origin: { kind: 'composer' }, presentation: { isFullscreen: fa
 /** Starts a session whose store holds `saved` and whose band holds two mods, for the divider to go between. */
 async function start($: any, on: any, saved?: unknown) {
   const store = new Map<string, unknown>(saved === undefined ? [] : [['config', saved]])
+  const seen = { registered: [] as any[], beneath: 0 }
   on('store.get', (_: any, e: any) => ({ value: store.get(e.key) }))
   on('store.set', (_: any, e: any) => {
     if (store.has('fail-saves')) throw new Error('disk full')
     store.set(e.key, e.value)
     return { value: undefined }
   })
-  on('session.start', (_: any, e: any) => ({ cwd: e.cwd }))
-  on('command.register', (_: any, e: any) => ({ value: { command: e.name } }))
+  on('session.start', (_: any, e: any) => {
+    seen.beneath++
+    return { cwd: e.cwd }
+  })
+  on('command.register', (_: any, e: any) => {
+    seen.registered.push(e)
+    return { value: { command: e.name } }
+  })
   on('ui.render', { component: 'AbovePrompt' }, () => col(row('first'), col(row('second'))))
   await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
   const run = async (args: string) => (await $.command.run({ command: 'mod-divider', args, ...COMMAND })).text as string
-  return { store, run }
+  return { store, run, seen }
 }
 
 const mount = ($: any, bodyColumns = 80) =>
   $.ui.mount({ plugin: 'mod-divider', surface: 'terminal', ...BAND, props: { ...BAND.props, bodyColumns } })
 
 describe('mod-divider', () => {
+  test('a session start registers the command once and lets hooks beneath run', async ($, on) => {
+    const { seen } = await start($, on)
+    expect(seen.registered.map((command) => command.name)).toEqual(['mod-divider'])
+    expect(seen.registered[0].argumentHint).toContain('align')
+    expect(seen.beneath).toBe(1)
+  })
+
   test('set changes the character the line repeats and saves it', async ($, on) => {
     const { store, run } = await start($, on)
     const ui = await mount($)
@@ -57,6 +71,21 @@ describe('mod-divider', () => {
     expect(await ui.find({ type: 'Text', text: /^-+$/ })).toBeDefined()
   })
 
+  test('a state failure after a save reports the save and when it applies', async ($, on) => {
+    let denied = false
+    on('state.set', (_: any, e: any, next: any) => (denied ? { deny: 'no' } : next(e)))
+    const { store, run } = await start($, on)
+    denied = true
+
+    const text = await run('set =')
+
+    expect(text).toContain('mod-divider character: =.')
+    expect(text).toContain('next session')
+    expect(text).not.toContain('nothing changed')
+    expect(store.get('config')).toEqual({ enabled: true, char: '=', length: null, align: 'center' })
+    expect(await run('')).not.toContain('next session')
+  })
+
   test('a rejected character leaves the store and the line alone', async ($, on) => {
     const { store, run } = await start($, on, { enabled: true, char: '=' })
     const ui = await mount($)
@@ -66,6 +95,15 @@ describe('mod-divider', () => {
       expect(store.get('config')).toEqual({ enabled: true, char: '=' })
     }
     expect(await ui.find({ type: 'Text', text: /^=+$/ })).toBeDefined()
+  })
+
+  test('a bare /mod-divider draws what it reports, after another session changed the store', async ($, on) => {
+    const { store, run } = await start($, on)
+    const ui = await mount($)
+    store.set('config', { enabled: false, char: '-', length: null, align: 'center' })
+
+    expect(await run('')).toContain('mod-divider is off')
+    expect(await ui.find({ type: 'Text', text: /^-+$/ })).toBeUndefined()
   })
 
   test('a blank line draws spaces across the panel, with no ellipsis to show', async ($, on) => {
@@ -90,6 +128,25 @@ describe('mod-divider', () => {
     expect(await again.find({ type: 'Text', text: /^-+$/ })).toBeDefined()
   })
 
+  test('a command checks what the store holds, so a hand edit after start is not saved back', async ($, on) => {
+    const { store, run } = await start($, on)
+    await mount($)
+    store.set('config', { char: '\x1b[31m', length: -1, align: 'middle' })
+
+    await run('length full')
+
+    expect(store.get('config')).toEqual({ enabled: true, char: '-', length: null, align: 'center' })
+  })
+
+  test('a command starts from the store, so a change from another session survives', async ($, on) => {
+    const { store, run } = await start($, on)
+    store.set('config', { enabled: true, char: '=', length: 40, align: 'right' })
+
+    await run('off')
+
+    expect(store.get('config')).toEqual({ enabled: false, char: '=', length: 40, align: 'right' })
+  })
+
   test('a store that cannot save changes nothing and says so', async ($, on) => {
     const { store, run } = await start($, on, { enabled: true, char: '=' })
     const ui = await mount($)
@@ -99,10 +156,35 @@ describe('mod-divider', () => {
     expect(await ui.find({ type: 'Text', text: /^=+$/ })).toBeDefined()
   })
 
+  test('a store file that cannot be read still registers the command, and the command says so', async ($, on) => {
+    const registered: string[] = []
+    on('store.get', () => {
+      throw new Error('malformed')
+    })
+    on('session.start', (_: any, e: any) => ({ cwd: e.cwd }))
+    on('command.register', (_: any, e: any) => {
+      registered.push(e.name)
+      return { value: { command: e.name } }
+    })
+    await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
+
+    expect(registered).toEqual(['mod-divider'])
+    const { text } = await $.command.run({ command: 'mod-divider', args: 'off', ...COMMAND })
+    expect(text).toContain('could not read or save')
+  })
+
   test('a survey hides the line', async ($, on) => {
     await start($, on)
     const survey = await $.ui.mount({ plugin: 'mod-divider', surface: 'terminal', ...BAND, props: { ...BAND.props, hasSurvey: true } })
     expect(await survey.find({ type: 'Text', text: /^-+$/ })).toBeUndefined()
+  })
+
+  test('the line is dim and cut at the panel edge, not wrapped', async ($, on) => {
+    await start($, on)
+    const ui = await mount($)
+    const line = await ui.find({ type: 'Text', text: /^-+$/ })
+    expect(line?.props.wrap).toBe('truncate')
+    expect(line?.props.dimColor).toBe(true)
   })
 })
 
@@ -146,7 +228,7 @@ describe('mod-divider length', () => {
     expect(store.get('config')).toEqual({ enabled: true, char: '-', length: 94, align: 'center' })
   })
 
-  test('narrowing the panel shrinks the line to its edge and keeps the setting', async ($, on) => {
+  test('narrowing the panel falls back to the long line for the Text to cut, and keeps the setting', async ($, on) => {
     const { store, run } = await start($, on)
     const wide = await mount($)
     await run('length 60')
@@ -159,6 +241,26 @@ describe('mod-divider length', () => {
 
     const back = await mount($)
     expect(await back.find({ type: 'Text', text: /^ {10}-{60}$/ })).toBeDefined()
+  })
+
+  test('a length is clamped against the latest draw, not the first', async ($, on) => {
+    const { store, run } = await start($, on)
+    const wide = await mount($)
+    await wide.unmount()
+    await mount($, 40)
+
+    await run('length 60')
+
+    expect(store.get('config')).toEqual({ enabled: true, char: '-', length: 39, align: 'center' })
+  })
+
+  test('a draw while off still records the panel', async ($, on) => {
+    const { store, run } = await start($, on, { enabled: false, char: '-' })
+    await mount($, 40)
+
+    await run('length 60')
+
+    expect(store.get('config')).toEqual({ enabled: false, char: '-', length: 39, align: 'center' })
   })
 
   test('a rejected length leaves the store and the line alone', async ($, on) => {

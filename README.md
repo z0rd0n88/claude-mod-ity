@@ -23,17 +23,17 @@ Install, at the Claude Code prompt:
 | `/mod-divider length full` | Fills the panel again. This is the default |
 | `/mod-divider align left`, `center` or `right` | Moves a shorter line within the panel. The default is `center` |
 
-Your settings persist across sessions and apply in every project. Another session that is already open picks up a change when it restarts, or the next time it changes a setting.
+Your settings persist across sessions and apply in every project. Another session that is already open picks up a change when it restarts, or the next time it runs `/mod-divider`.
 
 ### Length
 
 A length is in terminal columns and must be under the panel's width. Most emojis take 2 columns, so `length 10` draws 5 🔥, and an odd length rounds down. The exception is `length 1` with a 2-column character, which still draws one.
 
-- A value at or past the panel's width is shortened to one column under it, with a note.
+- A value at or past the panel's width is shortened to one column under it, with a note. Before the first draw, the length is checked against the terminal's width instead, so the line may still be shortened at draw time.
 - Zero, negative numbers, decimals and anything else that is not a whole number are rejected, with a message and no change to your settings.
-- If the panel gets narrower than your length, the line stops at the panel's edge. Your length comes back when the panel widens.
+- If the panel gets as narrow as your length or narrower, the line stops at the panel's edge and ends in `…`, as the full-width line does. A blank line just fills the panel. Your length comes back when the panel widens.
 
-Character widths are estimated, as Claude Code has no helper for them. If a guess is too low, the line is cut at the panel's edge with `…`, and it never draws past the edge.
+Character widths are estimated, as Claude Code has no helper for them. A wrong guess makes the line longer or shorter than you asked and can misplace `center` and `right`. If it reaches the panel's edge it is cut there with `…`, and it never draws past the edge.
 
 ### Alignment
 
@@ -48,7 +48,7 @@ Rejected, with a message and no change to your settings:
 - More or less than one character, or over 32 UTF-16 units
 - Control characters, newlines, tabs and every blank except the plain space
 - Invisible characters and text-direction controls
-- Lone combining marks, private-use characters and unassigned code points
+- Lone combining marks, Hangul vowel and final jamo on their own, private-use characters and unassigned code points
 
 An emoji newer than the Unicode version your Claude Code knows may be rejected too.
 

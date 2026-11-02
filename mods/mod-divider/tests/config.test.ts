@@ -1,7 +1,10 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { checkChar, cellWidth, DEFAULT_CONFIG, dividerText, loadConfig, runCommand } from '../hooks/config'
+import { checkChar, cellWidth, DEFAULT_CONFIG, dividerText, loadConfig, runCommand as runAt } from '../hooks/config'
 import type { Align, Config } from '../types'
+
+// Most cases here do not depend on the panel's width.
+const runCommand = (current: Config, args: string, panel = 80) => runAt(current, args, panel)
 
 const ACCEPTED: [string, string][] = [
   ['dash', '-'],
@@ -9,6 +12,8 @@ const ACCEPTED: [string, string][] = [
   ['letter', 'x'],
   ['accented letter, composed', 'é'],
   ['non-Latin letter', '語'],
+  ['letter with a vowel mark', '\u{0915}\u{093f}'],
+  ['letter with the most marks allowed', 'x\u{0301}\u{0302}\u{0303}'],
   ['box drawing', '─'],
   ['emoji', '🔥'],
   ['emoji with a variation selector', '❤️'],
@@ -17,6 +22,7 @@ const ACCEPTED: [string, string][] = [
   ['flag from tag characters', '🏴\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F}'],
   ['keycap', '1️⃣'],
   ['ZWJ family', '👨‍👩‍👧'],
+  ['kiss with two skin tones, 15 UTF-16 units', '\u{1f469}\u{1f3fd}\u{200d}\u{2764}\u{fe0f}\u{200d}\u{1f48b}\u{200d}\u{1f468}\u{1f3fd}'],
 ]
 
 const REJECTED: [string, string][] = [
@@ -48,12 +54,20 @@ const REJECTED: [string, string][] = [
   ['braille blank', '\u2800'],
   ['lone combining mark', '\u0301'],
   ['lone variation selector', '\ufe0f'],
+  ['half fill space, a symbol that draws blank', '\u{303f}'],
+  ['object replacement, a placeholder with no symbol of its own', '\u{fffc}'],
+  ['null notehead, a symbol that draws blank', '\u{1d159}'],
   ['letter plus a hidden variation selector', 'x\u{e0100}'],
+  ['conjoining vowel on its own', '\u{1161}'],
+  ['conjoining final on its own', '\u{11a8}'],
+  ['extended conjoining vowel on its own', '\u{d7b0}'],
+  ['letter plus an invisible filler mark', 'x\u{16fe4}'],
   ['lone tag character', '\u{e0067}'],
   ['private use', '\ue000'],
   ['unassigned', '\u{10ffff}'],
   ['lone surrogate', '\ud83d'],
   ['stacked marks', 'x\u0301\u0302\u0303\u0304'],
+  ['letter plus a mark that does not join it', 'a\u{102b}'],
   ['over the length cap', 'x'.repeat(33)],
   ['very long', '-'.repeat(1_000_000)],
   ['ZWJ sequence that is no real emoji', 'x\u200d🔥'],
@@ -71,8 +85,16 @@ describe('checkChar', () => {
     })
   }
 
+  test('the length cap refuses over 32 units before the character rules look', () => {
+    expect(runCommand(DEFAULT_CONFIG, `set x${'\u{0301}'.repeat(32)}`, 80).text).toContain('exactly one')
+  })
+
   test('stores one spelling of a character typed in decomposed form', () => {
     expect(checkChar('e\u0301')).toEqual({ ok: true, char: 'é' })
+  })
+
+  test('jamo that make a syllable compose into it and are kept', () => {
+    expect(checkChar('\u{1112}\u{1161}\u{11ab}')).toEqual({ ok: true, char: '한' })
   })
 
   test('a rejection never repeats the input', () => {
@@ -98,7 +120,7 @@ describe('loadConfig', () => {
     expect(loadConfig({ enabled: false, char: '=' })).toEqual({ enabled: false, char: '=', length: null, align: 'center' })
   })
 
-  test('a hand-edited store cannot get a bad value drawn', () => {
+  test('replaces bad values with their defaults', () => {
     for (const saved of [null, 7, 'x', [], ['a'], {}, { char: 7 }, { enabled: 'no' }, { char: '\x1b[31m' }, { char: '--' }, { char: '' }]) {
       expect(loadConfig(saved)).toEqual(DEFAULT_CONFIG)
     }
@@ -109,6 +131,12 @@ describe('loadConfig', () => {
     for (const align of ['middle', 'LEFT', '', 1, null, true, {}, ['left'], 'toString', '__proto__']) {
       expect(loadConfig({ align }).align).toBe('center')
     }
+  })
+
+  test('keeps a length at either end of the range, and one spelling of a character', () => {
+    expect(loadConfig({ length: 1 }).length).toBe(1)
+    expect(loadConfig({ length: 1000 }).length).toBe(1000)
+    expect(loadConfig({ char: 'e\u{0301}' }).char).toBe('\u{e9}')
   })
 
   test('a config saved before alignment existed starts centered', () => {
@@ -126,10 +154,16 @@ describe('cellWidth', () => {
   const cases: [string, number][] = [
     ['-', 1],
     [' ', 1],
+    ['\u{3248}', 1],
+    ['\u{1f1fa}', 1],
     ['é', 1],
     ['─', 1],
     ['©', 1],
     ['語', 2],
+    ['\u{fe10}', 2],
+    ['\u{16fe0}', 2],
+    ['\u{1b000}', 2],
+    ['\u{1f200}', 2],
     ['한', 2],
     ['Ａ', 2],
     ['🔥', 2],
@@ -137,6 +171,8 @@ describe('cellWidth', () => {
     ['👍🏽', 2],
     ['🇺🇸', 2],
     ['👨‍👩‍👧', 2],
+    ['\u{20000}', 2],
+    ['\u{1100}', 2],
   ]
   for (const [char, cells] of cases) {
     test(`${char} takes ${cells}`, () => {
@@ -218,7 +254,7 @@ describe('dividerText', () => {
     expect(dividerText(config(1, '🔥'), 80)).toBe('🔥')
   })
 
-  test('a panel narrower than the saved length gets a line that stops at its edge', () => {
+  test('a panel at or under the saved length gets the long line for the Text to cut, or a blank line its width', () => {
     expect(dividerText(config(60), 40)).toBe('-'.repeat(1000))
     expect(dividerText(config(60), 60)).toBe('-'.repeat(1000))
     expect(dividerText(config(60, ' '), 40)).toBe(' '.repeat(40))
@@ -232,6 +268,12 @@ describe('runCommand', () => {
   test('on and off change only the switch', () => {
     expect(runCommand(off, 'on').config).toEqual({ enabled: true, char: '🔥', length: null, align: 'center' })
     expect(runCommand(on, 'off').config).toEqual({ enabled: false, char: '-', length: null, align: 'center' })
+  })
+
+  test('on, off and length full say exactly what they did', () => {
+    expect(runCommand(on, 'on', 80).text).toBe('mod-divider is on.')
+    expect(runCommand(on, 'off', 80).text).toBe('mod-divider is off.')
+    expect(runCommand(on, 'length full', 80).text).toBe('mod-divider length: full.')
   })
 
   test('length sets columns under the panel, at the boundary included', () => {
@@ -250,9 +292,11 @@ describe('runCommand', () => {
     }
   })
 
-  test('with no panel width known, length is only held to the ceiling', () => {
-    expect(runCommand(on, 'length 500').config?.length).toBe(500)
-    expect(runCommand(on, 'length 99999').config?.length).toBe(1000)
+  test('a panel wider than the ceiling still holds length to what a reload keeps', () => {
+    const result = runCommand(on, 'length 1500', 2000)
+    expect(result.config?.length).toBe(1000)
+    expect(result.text).toContain('shortened')
+    expect(loadConfig(result.config).length).toBe(1000)
   })
 
   test('a panel too narrow to fit a shorter line still gets a usable length', () => {
@@ -298,6 +342,12 @@ describe('runCommand', () => {
     expect(runCommand(right, 'length full', 80).config?.align).toBe('right')
   })
 
+  test('extra spaces around a command are ignored', () => {
+    expect(runCommand(on, 'length  5', 80).config?.length).toBe(5)
+    expect(runCommand(on, 'align  left', 80).config?.align).toBe('left')
+    expect(runCommand(on, '  set =', 80).config?.char).toBe('=')
+  })
+
   test('an alignment that is not left, center or right changes nothing and does not repeat the input', () => {
     for (const args of ['align', 'align ', 'align middle', 'align LEFT', 'align Center', 'align left right', 'align 1', 'align \x1b[31m', 'align \u202e']) {
       const result = runCommand(on, args)
@@ -305,6 +355,13 @@ describe('runCommand', () => {
       expect(result.text).toContain('Use left, center or right. Nothing changed.')
       expect(result.text).not.toContain('\x1b')
       expect(result.text).not.toContain('\u202e')
+    }
+  })
+
+  test('the usage names every subcommand and value', () => {
+    const { text } = runCommand(on, 'toggle', 80)
+    for (const word of ['on', 'off', 'set', 'length', 'full', 'align', 'left', 'center', 'right']) {
+      expect(text).toContain(word)
     }
   })
 
@@ -322,9 +379,20 @@ describe('runCommand', () => {
     expect(result.text).toContain('/mod-divider on')
   })
 
+  test('set saves one spelling of a character and names a blank as space', () => {
+    expect(runCommand(on, 'set e\u{0301}', 80).config?.char).toBe('\u{e9}')
+    expect(runCommand(on, 'set space', 80).text).toContain('character: space')
+  })
+
   test('a blank line is set by the word space, or by a literal space if the prompt keeps it', () => {
     expect(runCommand(on, 'set space').config?.char).toBe(' ')
     expect(runCommand(on, 'set  ').config?.char).toBe(' ')
+  })
+
+  test('each rejection gives its own reason', () => {
+    expect(runCommand(on, 'set --', 80).text).toContain('exactly one')
+    expect(runCommand(on, 'set \x1b', 80).text).toContain('not allowed')
+    expect(runCommand(on, 'length abc', 80).text).toContain('whole number')
   })
 
   test('input that is not one allowed character changes nothing and says why', () => {
@@ -332,6 +400,14 @@ describe('runCommand', () => {
       const result = runCommand(on, args)
       expect(result.config).toBeUndefined()
       expect(result.text).toContain('Nothing changed.')
+    }
+  })
+
+  test('a word only starting like length or align gets the usage and changes nothing', () => {
+    for (const args of ['lengthx10', 'alignxleft', 'length\t5', 'align\tleft']) {
+      const result = runCommand(on, args, 80)
+      expect(result.config).toBeUndefined()
+      expect(result.text).toContain('Usage:')
     }
   })
 
