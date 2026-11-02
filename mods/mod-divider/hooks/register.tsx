@@ -16,9 +16,10 @@ export const register: Register = (on) => {
   let panel: number | undefined
 
   on('session.start', async ($, e, next) => {
-    // A store file that cannot be read must not cost the session its command, which reports the failure when run.
+    // A store file that cannot be read or a denied write must not cost the session its command. An unreadable file draws
+    // the default line, and the command reports the failure when run.
     const saved = loadConfig(await $.store.get('config').catch(() => undefined))
-    await update($, config, () => saved)
+    await update($, config, () => saved).catch(() => {})
     await $.command.register({
       name: 'mod-divider',
       description: 'Turn the divider line on or off, or set its character, length and alignment',
@@ -34,8 +35,11 @@ export const register: Register = (on) => {
     const loaded = loadConfig(await $.store.get('config'))
     const result = runCommand(loaded, e.args, width)
     if (result.config) await $.store.set('config', result.config)
+    // A rejected call leaves everything alone, as its reply says.
+    if (!result.config && e.args.trim() !== '') return { text: result.text }
     const latest = result.config ?? loaded
-    // Every call, so what this reports is what this session draws. A failure here is no failed save: the store has it.
+    // A bare call refreshes too, so what it reports is what this session draws unless a hook denies the write. A failure
+    // here is no failed save: the store has it.
     const note = await update($, config, () => latest).then(() => '', () => (result.config ? ' It applies from the next session.' : ''))
     return { text: result.text + note }
   }).catch(() => ({ text: 'mod-divider could not read or save its configuration, so nothing changed.' }))

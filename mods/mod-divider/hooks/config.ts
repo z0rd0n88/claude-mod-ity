@@ -16,7 +16,7 @@ const graphemes = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
 // An allowlist, so control, format, separator, private-use and unassigned code points and lone marks are out by not
 // being listed. U+2800, U+303F, U+FFFC and U+1D159 are symbols that may draw blank, and the only blank this mod allows
 // is the space.
-// Hangul vowel and final jamo and the filler mark U+16FE4 can take no column in a terminal, but the layout counts one.
+// Hangul conjoining vowels and finals and the filler mark U+16FE4 can take no column in a terminal, but the layout counts one.
 // NFC has already composed the jamo that make a syllable.
 // Built from strings because the types' TypeScript target rejects a literal with the v flag, which the engine runs.
 const TEXT = new RegExp(String.raw`^[[\p{L}\p{N}\p{P}\p{S}]--[\p{Default_Ignorable_Code_Point}\u{303f}\u{fffc}\u{1d159}\u2800\u{1161}-\u{11ff}\u{d7b0}-\u{d7ff}]][\p{M}--[\p{Default_Ignorable_Code_Point}\u{16fe4}]]{0,3}$`, 'v')

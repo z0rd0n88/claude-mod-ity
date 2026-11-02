@@ -42,8 +42,14 @@ describe('mod-divider', () => {
   test('a session start registers the command once and lets hooks beneath run', async ($, on) => {
     const { seen } = await start($, on)
     expect(seen.registered.map((command) => command.name)).toEqual(['mod-divider'])
-    expect(seen.registered[0].argumentHint).toContain('align')
+    expect(seen.registered[0].argumentHint).toBe('on | off | set <character> | length <columns> | align <left|center|right>')
     expect(seen.beneath).toBe(1)
+  })
+
+  test('a denied state write at session start still registers the command', async ($, on) => {
+    on('state.set', () => ({ deny: 'no' }))
+    const { seen } = await start($, on)
+    expect(seen.registered.map((command) => command.name)).toEqual(['mod-divider'])
   })
 
   test('set changes the character the line repeats and saves it', async ($, on) => {
@@ -51,7 +57,7 @@ describe('mod-divider', () => {
     const ui = await mount($)
     expect(await ui.find({ type: 'Text', text: /^-{1000}$/ })).toBeDefined()
 
-    expect(await run('set 🔥')).toContain('🔥')
+    expect(await run('set 🔥')).toBe('mod-divider character: 🔥.')
 
     expect(store.get('config')).toEqual({ enabled: true, char: '🔥', length: null, align: 'center' })
     expect(await ui.find({ type: 'Text', text: /^(🔥){1000}$/u })).toBeDefined()
@@ -79,9 +85,7 @@ describe('mod-divider', () => {
 
     const text = await run('set =')
 
-    expect(text).toContain('mod-divider character: =.')
-    expect(text).toContain('next session')
-    expect(text).not.toContain('nothing changed')
+    expect(text).toBe('mod-divider character: =. It applies from the next session.')
     expect(store.get('config')).toEqual({ enabled: true, char: '=', length: null, align: 'center' })
     expect(await run('')).not.toContain('next session')
   })
@@ -104,6 +108,18 @@ describe('mod-divider', () => {
 
     expect(await run('')).toContain('mod-divider is off')
     expect(await ui.find({ type: 'Text', text: /^-+$/ })).toBeUndefined()
+  })
+
+  test('a rejected command leaves the drawn line alone, as its reply says, after another session changed the store', async ($, on) => {
+    const { store, run } = await start($, on)
+    const ui = await mount($)
+    store.set('config', { enabled: false, char: '-', length: null, align: 'center' })
+
+    expect(await run('set --')).toContain('Nothing changed.')
+    expect(await run('toggle')).toContain('Usage:')
+
+    expect(await ui.find({ type: 'Text', text: /^-+$/ })).toBeDefined()
+    expect(store.get('config')).toEqual({ enabled: false, char: '-', length: null, align: 'center' })
   })
 
   test('a blank line draws spaces across the panel, with no ellipsis to show', async ($, on) => {
@@ -156,11 +172,12 @@ describe('mod-divider', () => {
     expect(await ui.find({ type: 'Text', text: /^=+$/ })).toBeDefined()
   })
 
-  test('a store file that cannot be read still registers the command, and the command says so', async ($, on) => {
+  test('a store file that cannot be read draws the default line, registers the command, and the command says so', async ($, on) => {
     const registered: string[] = []
     on('store.get', () => {
       throw new Error('malformed')
     })
+    on('ui.render', { component: 'AbovePrompt' }, () => col(row('first'), col(row('second'))) as any)
     on('session.start', (_: any, e: any) => ({ cwd: e.cwd }))
     on('command.register', (_: any, e: any) => {
       registered.push(e.name)
@@ -169,6 +186,8 @@ describe('mod-divider', () => {
     await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
 
     expect(registered).toEqual(['mod-divider'])
+    const ui = await mount($)
+    expect(await ui.find({ type: 'Text', text: /^-{1000}$/ })).toBeDefined()
     const { text } = await $.command.run({ command: 'mod-divider', args: 'off', ...COMMAND })
     expect(text).toContain('could not read or save')
   })

@@ -8,6 +8,8 @@ const runCommand = (current: Config, args: string, panel = 80) => runAt(current,
 
 const ACCEPTED: [string, string][] = [
   ['dash', '-'],
+  ['digit', '5'],
+  ['lone leading jamo', '\u{1100}'],
   ['the only blank allowed', ' '],
   ['letter', 'x'],
   ['accented letter, composed', 'é'],
@@ -68,6 +70,11 @@ const REJECTED: [string, string][] = [
   ['lone surrogate', '\ud83d'],
   ['stacked marks', 'x\u0301\u0302\u0303\u0304'],
   ['letter plus a mark that does not join it', 'a\u{102b}'],
+  ['conjoining vowel, second', '\u{1162}'],
+  ['conjoining final, second', '\u{11a9}'],
+  ['conjoining final, last', '\u{11ff}'],
+  ['extended conjoining vowel, last', '\u{d7c6}'],
+  ['extended conjoining final, last', '\u{d7fb}'],
   ['over the length cap', 'x'.repeat(33)],
   ['very long', '-'.repeat(1_000_000)],
   ['ZWJ sequence that is no real emoji', 'x\u200d🔥'],
@@ -87,6 +94,7 @@ describe('checkChar', () => {
 
   test('the length cap refuses over 32 units before the character rules look', () => {
     expect(runCommand(DEFAULT_CONFIG, `set x${'\u{0301}'.repeat(32)}`, 80).text).toContain('exactly one')
+    expect(runCommand(DEFAULT_CONFIG, `set x${'\u{0301}'.repeat(31)}`, 80).text).toContain('not allowed')
   })
 
   test('stores one spelling of a character typed in decomposed form', () => {
@@ -154,6 +162,22 @@ describe('cellWidth', () => {
   const cases: [string, number][] = [
     ['-', 1],
     [' ', 1],
+    ['\u{1f525}\u{0301}', 2],
+    ['\u{324f}', 1],
+    ['\u{3247}', 2],
+    ['\u{1f1e6}', 1],
+    ['\u{1f1ff}', 1],
+    ['\u{fe19}', 2],
+    ['\u{17000}', 2],
+    ['\u{18d08}', 2],
+    ['\u{1aff0}', 2],
+    ['\u{1b2fb}', 2],
+    ['\u{1f265}', 2],
+    ['\u{2e80}', 2],
+    ['\u{a960}', 2],
+    ['\u{fa0e}', 2],
+    ['\u{fe30}', 2],
+    ['\u{ffe0}', 2],
     ['\u{3248}', 1],
     ['\u{1f1fa}', 1],
     ['é', 1],
@@ -360,9 +384,15 @@ describe('runCommand', () => {
 
   test('the usage names every subcommand and value', () => {
     const { text } = runCommand(on, 'toggle', 80)
-    for (const word of ['on', 'off', 'set', 'length', 'full', 'align', 'left', 'center', 'right']) {
+    for (const word of ['on', 'off', 'set <character>', 'length <columns>', 'length full', 'align', 'left', 'center', 'right']) {
       expect(text).toContain(word)
     }
+    expect(runCommand(on, '', 80).text).toContain('Usage:')
+  })
+
+  test('a set while on says only that, and a set while off says how to see it', () => {
+    expect(runCommand(on, 'set =', 80).text).toBe('mod-divider character: =.')
+    expect(runCommand(off, 'set =', 80).text).toBe('mod-divider character: =. mod-divider is off, so it shows after /mod-divider on.')
   })
 
   test('no arguments reports the state and changes nothing', () => {
