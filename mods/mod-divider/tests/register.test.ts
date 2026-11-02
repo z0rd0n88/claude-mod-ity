@@ -39,7 +39,7 @@ describe('mod-divider', () => {
 
     expect(await run('set 🔥')).toContain('🔥')
 
-    expect(store.get('config')).toEqual({ enabled: true, char: '🔥', length: null })
+    expect(store.get('config')).toEqual({ enabled: true, char: '🔥', length: null, align: 'center' })
     expect(await ui.find({ type: 'Text', text: /^(🔥){1000}$/u })).toBeDefined()
   })
 
@@ -48,12 +48,12 @@ describe('mod-divider', () => {
     const ui = await mount($)
 
     expect(await run('off')).toContain('off')
-    expect(store.get('config')).toEqual({ enabled: false, char: '-', length: null })
+    expect(store.get('config')).toEqual({ enabled: false, char: '-', length: null, align: 'center' })
     expect(await ui.find({ type: 'Text', text: /^-+$/ })).toBeUndefined()
     expect(await ui.find({ type: 'Text', text: 'first' })).toBeDefined()
 
     expect(await run('on')).toContain('on')
-    expect(store.get('config')).toEqual({ enabled: true, char: '-', length: null })
+    expect(store.get('config')).toEqual({ enabled: true, char: '-', length: null, align: 'center' })
     expect(await ui.find({ type: 'Text', text: /^-+$/ })).toBeDefined()
   })
 
@@ -74,7 +74,7 @@ describe('mod-divider', () => {
 
     await run('set space')
 
-    expect(store.get('config')).toEqual({ enabled: true, char: ' ', length: null })
+    expect(store.get('config')).toEqual({ enabled: true, char: ' ', length: null, align: 'center' })
     expect(await ui.find({ type: 'Text', text: /^ {80}$/ })).toBeDefined()
   })
 
@@ -113,8 +113,8 @@ describe('mod-divider length', () => {
 
     expect(await run('length 40')).toContain('40')
 
-    expect(store.get('config')).toEqual({ enabled: true, char: '-', length: 40 })
-    expect(await ui.find({ type: 'Text', text: /^-{40}$/ })).toBeDefined()
+    expect(store.get('config')).toEqual({ enabled: true, char: '-', length: 40, align: 'center' })
+    expect(await ui.find({ type: 'Text', text: /^ {20}-{40}$/ })).toBeDefined()
   })
 
   test('the longest length allowed is one under the panel', async ($, on) => {
@@ -123,7 +123,7 @@ describe('mod-divider length', () => {
 
     await run('length 79')
 
-    expect(store.get('config')).toEqual({ enabled: true, char: '-', length: 79 })
+    expect(store.get('config')).toEqual({ enabled: true, char: '-', length: 79, align: 'center' })
     expect(await ui.find({ type: 'Text', text: /^-{79}$/ })).toBeDefined()
   })
 
@@ -133,7 +133,7 @@ describe('mod-divider length', () => {
 
     for (const args of ['length 80', 'length 5000']) {
       expect(await run(args)).toContain('shortened')
-      expect(store.get('config')).toEqual({ enabled: true, char: '-', length: 79 })
+      expect(store.get('config')).toEqual({ enabled: true, char: '-', length: 79, align: 'center' })
     }
     expect(await ui.find({ type: 'Text', text: /^-{79}$/ })).toBeDefined()
   })
@@ -143,7 +143,7 @@ describe('mod-divider length', () => {
 
     await run('length 5000')
 
-    expect(store.get('config')).toEqual({ enabled: true, char: '-', length: 94 })
+    expect(store.get('config')).toEqual({ enabled: true, char: '-', length: 94, align: 'center' })
   })
 
   test('narrowing the panel shrinks the line to its edge and keeps the setting', async ($, on) => {
@@ -154,31 +154,98 @@ describe('mod-divider length', () => {
 
     const narrow = await mount($, 40)
     expect(await narrow.find({ type: 'Text', text: /^-{1000}$/ })).toBeDefined()
-    expect(store.get('config')).toEqual({ enabled: true, char: '-', length: 60 })
+    expect(store.get('config')).toEqual({ enabled: true, char: '-', length: 60, align: 'center' })
     await narrow.unmount()
 
     const back = await mount($)
-    expect(await back.find({ type: 'Text', text: /^-{60}$/ })).toBeDefined()
+    expect(await back.find({ type: 'Text', text: /^ {10}-{60}$/ })).toBeDefined()
   })
 
   test('a rejected length leaves the store and the line alone', async ($, on) => {
-    const { store, run } = await start($, on, { enabled: true, char: '-', length: 30 })
+    const { store, run } = await start($, on, { enabled: true, char: '-', length: 30, align: 'center' })
     const ui = await mount($)
 
     for (const args of ['length 0', 'length -5', 'length abc', 'length 1.5', 'length']) {
       expect(await run(args)).toContain('Nothing changed.')
-      expect(store.get('config')).toEqual({ enabled: true, char: '-', length: 30 })
+      expect(store.get('config')).toEqual({ enabled: true, char: '-', length: 30, align: 'center' })
     }
-    expect(await ui.find({ type: 'Text', text: /^-{30}$/ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /^ {25}-{30}$/ })).toBeDefined()
   })
 
   test('length full fills the panel again', async ($, on) => {
-    const { store, run } = await start($, on, { enabled: true, char: '-', length: 30 })
+    const { store, run } = await start($, on, { enabled: true, char: '-', length: 30, align: 'center' })
     const ui = await mount($)
 
     await run('length full')
 
-    expect(store.get('config')).toEqual({ enabled: true, char: '-', length: null })
+    expect(store.get('config')).toEqual({ enabled: true, char: '-', length: null, align: 'center' })
     expect(await ui.find({ type: 'Text', text: /^-{1000}$/ })).toBeDefined()
+  })
+})
+
+describe('mod-divider align', () => {
+  test('a short line starts centered', async ($, on) => {
+    const { run } = await start($, on)
+    const ui = await mount($)
+
+    await run('length 40')
+
+    expect(await ui.find({ type: 'Text', text: /^ {20}-{40}$/ })).toBeDefined()
+  })
+
+  test('left, right and center move the line and are saved', async ($, on) => {
+    const { store, run } = await start($, on, { enabled: true, char: '-', length: 40 })
+    const ui = await mount($)
+
+    expect(await run('align left')).toContain('left')
+    expect(store.get('config')).toEqual({ enabled: true, char: '-', length: 40, align: 'left' })
+    expect(await ui.find({ type: 'Text', text: /^-{40}$/ })).toBeDefined()
+
+    expect(await run('align right')).toContain('right')
+    expect(store.get('config')).toEqual({ enabled: true, char: '-', length: 40, align: 'right' })
+    expect(await ui.find({ type: 'Text', text: /^ {40}-{40}$/ })).toBeDefined()
+
+    expect(await run('align center')).toContain('center')
+    expect(store.get('config')).toEqual({ enabled: true, char: '-', length: 40, align: 'center' })
+    expect(await ui.find({ type: 'Text', text: /^ {20}-{40}$/ })).toBeDefined()
+  })
+
+  test('a line that fills the panel draws the same whatever the alignment', async ($, on) => {
+    const { run } = await start($, on)
+    const ui = await mount($)
+
+    for (const align of ['left', 'right', 'center']) {
+      await run(`align ${align}`)
+      expect(await ui.find({ type: 'Text', text: /^-{1000}$/ })).toBeDefined()
+    }
+  })
+
+  test('a line shrunk to a narrower panel gets no alignment either', async ($, on) => {
+    await start($, on, { enabled: true, char: '-', length: 60, align: 'right' })
+    const wide = await mount($)
+    expect(await wide.find({ type: 'Text', text: /^ {20}-{60}$/ })).toBeDefined()
+    await wide.unmount()
+
+    const narrow = await mount($, 40)
+    expect(await narrow.find({ type: 'Text', text: /^-{1000}$/ })).toBeDefined()
+  })
+
+  test('a rejected alignment leaves the store and the line alone', async ($, on) => {
+    const { store, run } = await start($, on, { enabled: true, char: '-', length: 40, align: 'right' })
+    const ui = await mount($)
+
+    for (const args of ['align', 'align middle', 'align LEFT', 'align left right', 'align \x1b[31m']) {
+      const text = await run(args)
+      expect(text).toContain('Nothing changed.')
+      expect(text).not.toContain('\x1b')
+      expect(store.get('config')).toEqual({ enabled: true, char: '-', length: 40, align: 'right' })
+    }
+    expect(await ui.find({ type: 'Text', text: /^ {40}-{40}$/ })).toBeDefined()
+  })
+
+  test('a config saved before alignment existed starts centered and keeps its length', async ($, on) => {
+    await start($, on, { enabled: true, char: '=', length: 20 })
+    const ui = await mount($)
+    expect(await ui.find({ type: 'Text', text: /^ {30}={20}$/ })).toBeDefined()
   })
 })

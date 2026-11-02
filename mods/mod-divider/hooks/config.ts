@@ -1,6 +1,8 @@
-import type { Config } from '../types'
+import type { Align, Config } from '../types'
 
-export const DEFAULT_CONFIG: Config = { enabled: true, char: '-', length: null }
+export const DEFAULT_CONFIG: Config = { enabled: true, char: '-', length: null, align: 'center' }
+
+const ALIGNS: readonly unknown[] = ['left', 'center', 'right'] satisfies Align[]
 
 // Checked before anything else looks at the input. The longest emoji sequences fit well inside it.
 const MAX_LENGTH = 32
@@ -34,12 +36,13 @@ export function checkChar(input: string): CharCheck {
 export function loadConfig(saved: unknown): Config {
   // Only a plain object: a string or an array has a `length` of its own.
   const isRecord = typeof saved === 'object' && saved !== null && !Array.isArray(saved)
-  const { enabled, char, length } = (isRecord ? saved : {}) as Partial<Record<keyof Config, unknown>>
+  const { enabled, char, length, align } = (isRecord ? saved : {}) as Partial<Record<keyof Config, unknown>>
   const check = typeof char === 'string' ? checkChar(char) : undefined
   return {
     enabled: typeof enabled === 'boolean' ? enabled : DEFAULT_CONFIG.enabled,
     char: check?.ok ? check.char : DEFAULT_CONFIG.char,
     length: Number.isInteger(length) && (length as number) >= 1 && (length as number) <= WIDE ? (length as number) : DEFAULT_CONFIG.length,
+    align: ALIGNS.includes(align) ? (align as Align) : DEFAULT_CONFIG.align,
   }
 }
 
@@ -51,14 +54,20 @@ const WIDE_TEXT = /^[\p{Emoji_Presentation}\u1100-\u115f\u2e80-\u303e\u3041-\ua4
 export const cellWidth = (char: string) => (EMOJI.test(char) || WIDE_TEXT.test(char) ? 2 : 1)
 
 /** The text of the divider in a panel `panel` columns wide. */
-export function dividerText({ char, length }: Config, panel: number): string {
-  // A wide character always draws at least once: a length under the panel leaves it room, as the panel is 2 or more.
-  if (length !== null && length < panel) return char.repeat(Math.max(1, Math.floor(length / cellWidth(char))))
-  // A blank line has nothing to lose to a font's width, and cut by the Text it would show an ellipsis.
+export function dividerText({ char, length, align }: Config, panel: number): string {
+  if (length !== null && length < panel) {
+    // A wide character always draws at least once: a length under the panel leaves it room, as the panel is 2 or more.
+    const count = Math.max(1, Math.floor(length / cellWidth(char)))
+    const spare = panel - count * cellWidth(char)
+    const indent = align === 'right' ? spare : align === 'center' ? Math.floor(spare / 2) : 0
+    return ' '.repeat(indent) + char.repeat(count)
+  }
+  // The line fills the panel, so there is nothing to align. A blank line has nothing to lose to a font's width, and cut
+  // by the Text it would show an ellipsis.
   return char === ' ' ? ' '.repeat(panel) : char.repeat(WIDE)
 }
 
-const USAGE = 'Usage: /mod-divider on | off | set <character> | length <columns> | length full'
+const USAGE = 'Usage: /mod-divider on | off | set <character> | length <columns> | length full | align left | center | right'
 const shown = (char: string) => (char === ' ' ? 'space' : char)
 
 function runLength(current: Config, value: string, panel: number | undefined): { config?: Config; text: string } {
@@ -77,13 +86,18 @@ function runLength(current: Config, value: string, panel: number | undefined): {
 export function runCommand(current: Config, args: string, panel?: number): { config?: Config; text: string } {
   const command = args.trim()
   if (command === '') {
-    const state = `${current.enabled ? 'on' : 'off'}, character: ${shown(current.char)}, length: ${current.length ?? 'full'}`
+    const state = `${current.enabled ? 'on' : 'off'}, character: ${shown(current.char)}, length: ${current.length ?? 'full'}, align: ${current.align}`
     return { text: `mod-divider is ${state}. ${USAGE}` }
   }
   if (command === 'on' || command === 'off') {
     return { config: { ...current, enabled: command === 'on' }, text: `mod-divider is ${command}.` }
   }
   if (command === 'length' || command.startsWith('length ')) return runLength(current, command.slice('length '.length).trim(), panel)
+  if (command === 'align' || command.startsWith('align ')) {
+    const align = command.slice('align '.length).trim()
+    if (!ALIGNS.includes(align)) return { text: 'Use left, center or right. Nothing changed.' }
+    return { config: { ...current, align: align as Align }, text: `mod-divider align: ${align}.` }
+  }
   if (command !== 'set' && !command.startsWith('set ')) return { text: USAGE }
 
   // Only the one space after `set` is a separator: a further space is the character itself.

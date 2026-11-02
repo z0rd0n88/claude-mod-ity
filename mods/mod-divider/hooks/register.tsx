@@ -20,8 +20,8 @@ export const register: Register = (on) => {
     await update($, config, () => saved)
     await $.command.register({
       name: 'mod-divider',
-      description: 'Turn the divider line on or off, or set its character',
-      argumentHint: 'on | off | set <character>',
+      description: 'Turn the divider line on or off, or set its character, length and alignment',
+      argumentHint: 'on | off | set <character> | length <columns> | align <left|center|right>',
     })
     return next(e)
   })

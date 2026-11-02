@@ -14,13 +14,30 @@ Install, at the Claude Code prompt:
 
 | Command | What it does |
 |---|---|
-| `/mod-divider` | Shows whether it is on and which character it uses |
+| `/mod-divider` | Shows the current settings |
 | `/mod-divider on` | Draws the line. This is the default |
 | `/mod-divider off` | Stops drawing the line |
 | `/mod-divider set <character>` | Repeats that character. The default is `-` |
 | `/mod-divider set space` | Draws a blank line |
+| `/mod-divider length <columns>` | Draws that many terminal columns instead of filling the panel |
+| `/mod-divider length full` | Fills the panel again. This is the default |
+| `/mod-divider align left`, `center` or `right` | Moves a shorter line within the panel. The default is `center` |
 
-Your settings persist across sessions and apply in every project. Another session that is already open picks up a change when it restarts, or the next time it runs `/mod-divider on`, `off` or `set`.
+Your settings persist across sessions and apply in every project. Another session that is already open picks up a change when it restarts, or the next time it changes a setting.
+
+### Length
+
+A length is in terminal columns and must be under the panel's width. Most emojis take 2 columns, so `length 10` draws 5 🔥, and an odd length rounds down. The exception is `length 1` with a 2-column character, which still draws one.
+
+- A value at or past the panel's width is shortened to one column under it, with a note.
+- Zero, negative numbers, decimals and anything else that is not a whole number are rejected, with a message and no change to your settings.
+- If the panel gets narrower than your length, the line stops at the panel's edge. Your length comes back when the panel widens.
+
+Character widths are estimated, as Claude Code has no helper for them. If a guess is too low, the line is cut at the panel's edge with `…`, and it never draws past the edge.
+
+### Alignment
+
+Alignment moves only the divider, not other mods. A line with no spare columns, such as the default full width, stays as it is whatever the alignment. Center puts an odd spare column on the right. Anything other than exactly `left`, `center` or `right` is rejected, with a message and no change to your settings.
 
 ### Which characters work
 

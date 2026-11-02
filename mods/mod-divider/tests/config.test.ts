@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'claude-code/testing'
 
 import { checkChar, cellWidth, DEFAULT_CONFIG, dividerText, loadConfig, runCommand } from '../hooks/config'
+import type { Align, Config } from '../types'
 
 const ACCEPTED: [string, string][] = [
   ['dash', '-'],
@@ -84,26 +85,39 @@ describe('checkChar', () => {
 
 describe('loadConfig', () => {
   test('nothing stored gives on, a dash and the full width', () => {
-    expect(loadConfig(undefined)).toEqual({ enabled: true, char: '-', length: null })
-    expect(DEFAULT_CONFIG).toEqual({ enabled: true, char: '-', length: null })
+    expect(loadConfig(undefined)).toEqual({ enabled: true, char: '-', length: null, align: 'center' })
+    expect(DEFAULT_CONFIG).toEqual({ enabled: true, char: '-', length: null, align: 'center' })
   })
 
   test('keeps a valid config', () => {
-    expect(loadConfig({ enabled: false, char: '🔥', length: 40 })).toEqual({ enabled: false, char: '🔥', length: 40 })
-    expect(loadConfig({ enabled: true, char: ' ' })).toEqual({ enabled: true, char: ' ', length: null })
+    expect(loadConfig({ enabled: false, char: '🔥', length: 40, align: 'center' })).toEqual({ enabled: false, char: '🔥', length: 40, align: 'center' })
+    expect(loadConfig({ enabled: true, char: ' ' })).toEqual({ enabled: true, char: ' ', length: null, align: 'center' })
   })
 
   test('a config saved before length existed keeps its values', () => {
-    expect(loadConfig({ enabled: false, char: '=' })).toEqual({ enabled: false, char: '=', length: null })
+    expect(loadConfig({ enabled: false, char: '=' })).toEqual({ enabled: false, char: '=', length: null, align: 'center' })
   })
 
   test('a hand-edited store cannot get a bad value drawn', () => {
     for (const saved of [null, 7, 'x', [], ['a'], {}, { char: 7 }, { enabled: 'no' }, { char: '\x1b[31m' }, { char: '--' }, { char: '' }]) {
       expect(loadConfig(saved)).toEqual(DEFAULT_CONFIG)
     }
-    expect(loadConfig({ enabled: false, char: '\n' })).toEqual({ enabled: false, char: '-', length: null })
+    expect(loadConfig({ enabled: false, char: '\n' })).toEqual({ enabled: false, char: '-', length: null, align: 'center' })
     for (const length of [0, -1, 1.5, 1001, '40', null, true, {}, Number.MAX_SAFE_INTEGER]) {
       expect(loadConfig({ length }).length).toBeNull()
+    }
+    for (const align of ['middle', 'LEFT', '', 1, null, true, {}, ['left'], 'toString', '__proto__']) {
+      expect(loadConfig({ align }).align).toBe('center')
+    }
+  })
+
+  test('a config saved before alignment existed starts centered', () => {
+    expect(loadConfig({ enabled: true, char: '=', length: 20 })).toEqual({ enabled: true, char: '=', length: 20, align: 'center' })
+  })
+
+  test('keeps a saved alignment', () => {
+    for (const align of ['left', 'center', 'right']) {
+      expect(loadConfig({ align }).align).toBe(align)
     }
   })
 })
@@ -132,7 +146,53 @@ describe('cellWidth', () => {
 })
 
 describe('dividerText', () => {
-  const config = (length: number | null, char = '-') => ({ enabled: true, char, length })
+  const config = (length: number | null, char = '-', align: Align = 'left') => ({ enabled: true, char, length, align })
+
+  test('left starts at the edge, right ends at the other, center splits what is spare', () => {
+    expect(dividerText(config(40, '-', 'left'), 80)).toBe('-'.repeat(40))
+    expect(dividerText(config(40, '-', 'center'), 80)).toBe(' '.repeat(20) + '-'.repeat(40))
+    expect(dividerText(config(40, '-', 'right'), 80)).toBe(' '.repeat(40) + '-'.repeat(40))
+  })
+
+  test('center puts an odd spare column on the right', () => {
+    expect(dividerText(config(39, '-', 'center'), 80)).toBe(' '.repeat(20) + '-'.repeat(39))
+  })
+
+  test('alignment counts the columns a wide character takes', () => {
+    expect(dividerText(config(10, '🔥', 'right'), 80)).toBe(' '.repeat(70) + '🔥'.repeat(5))
+    expect(dividerText(config(10, '🔥', 'center'), 80)).toBe(' '.repeat(35) + '🔥'.repeat(5))
+  })
+
+  test('one spare column still aligns', () => {
+    expect(dividerText(config(79, '-', 'right'), 80)).toBe(' ' + '-'.repeat(79))
+    expect(dividerText(config(79, '-', 'center'), 80)).toBe('-'.repeat(79))
+    expect(dividerText(config(84, '🔥', 'right'), 85)).toBe(' ' + '🔥'.repeat(42))
+  })
+
+  test('a line with no spare columns gets no alignment', () => {
+    for (const align of ['left', 'center', 'right'] as const) {
+      expect(dividerText(config(null, '-', align), 80)).toBe('-'.repeat(1000))
+      expect(dividerText(config(null, '🔥', align), 85)).toBe('🔥'.repeat(1000))
+      expect(dividerText(config(null, ' ', align), 80)).toBe(' '.repeat(80))
+      expect(dividerText(config(80, '-', align), 80)).toBe('-'.repeat(1000))
+      expect(dividerText(config(200, '-', align), 80)).toBe('-'.repeat(1000))
+    }
+  })
+
+  test('no length under any panel overflows it, whatever the character and alignment', () => {
+    for (const char of ['-', '🔥', '語']) {
+      for (const align of ['left', 'center', 'right'] as const) {
+        for (let panel = 2; panel <= 120; panel++) {
+          for (let length = 1; length < panel; length++) {
+            const text = dividerText(config(length, char, align), panel)
+            const indent = text.length - text.trimStart().length
+            const drawn = [...text.trimStart()].length * cellWidth(char)
+            if (indent + drawn > panel) throw new Error(`${char} ${align} length ${length} overflows panel ${panel}`)
+          }
+        }
+      }
+    }
+  })
 
   test('no length keeps the line far wider than any panel, for the Text to cut', () => {
     expect(dividerText(config(null), 80)).toBe('-'.repeat(1000))
@@ -166,12 +226,12 @@ describe('dividerText', () => {
 })
 
 describe('runCommand', () => {
-  const on = { enabled: true, char: '-', length: null }
-  const off = { enabled: false, char: '🔥', length: null }
+  const on: Config = { enabled: true, char: '-', length: null, align: 'center' }
+  const off: Config = { enabled: false, char: '🔥', length: null, align: 'center' }
 
   test('on and off change only the switch', () => {
-    expect(runCommand(off, 'on').config).toEqual({ enabled: true, char: '🔥', length: null })
-    expect(runCommand(on, 'off').config).toEqual({ enabled: false, char: '-', length: null })
+    expect(runCommand(off, 'on').config).toEqual({ enabled: true, char: '🔥', length: null, align: 'center' })
+    expect(runCommand(on, 'off').config).toEqual({ enabled: false, char: '-', length: null, align: 'center' })
   })
 
   test('length sets columns under the panel, at the boundary included', () => {
@@ -200,39 +260,65 @@ describe('runCommand', () => {
   })
 
   test('length full goes back to the default', () => {
-    expect(runCommand({ ...on, length: 40 }, 'length full', 80).config).toEqual(on)
+    expect(runCommand({ ...on, length: 40, align: 'center' }, 'length full', 80).config).toEqual(on)
   })
 
   test('length keeps the other settings', () => {
-    expect(runCommand(off, 'length 40', 80).config).toEqual({ enabled: false, char: '🔥', length: 40 })
-    expect(runCommand({ ...on, length: 40 }, 'set =', 80).config).toEqual({ enabled: true, char: '=', length: 40 })
+    expect(runCommand(off, 'length 40', 80).config).toEqual({ enabled: false, char: '🔥', length: 40, align: 'center' })
+    expect(runCommand({ ...on, length: 40, align: 'center' }, 'set =', 80).config).toEqual({ enabled: true, char: '=', length: 40, align: 'center' })
   })
 
   test('a length that is not a positive whole number changes nothing and says why', () => {
     for (const args of ['length', 'length ', 'length 0', 'length 00', 'length 010', 'length -5', 'length +5', 'length 1.5', 'length 1e3', 'length abc', 'length 5 5', 'length Infinity', 'length ٥', 'length FULL', 'length \x1b[31m']) {
-      const result = runCommand({ ...on, length: 40 }, args, 80)
+      const result = runCommand({ ...on, length: 40, align: 'center' }, args, 80)
       expect(result.config).toBeUndefined()
       expect(result.text).toContain('Nothing changed.')
       expect(result.text).not.toContain('\x1b')
     }
   })
 
-  test('no arguments reports the length', () => {
+  test('no arguments reports the length and the alignment', () => {
     expect(runCommand(on, '').text).toContain('length: full')
-    expect(runCommand({ ...on, length: 40 }, '').text).toContain('length: 40')
+    expect(runCommand({ ...on, length: 40, align: 'center' }, '').text).toContain('length: 40')
+    expect(runCommand(on, '').text).toContain('align: center')
+    expect(runCommand({ ...on, align: 'right' }, '').text).toContain('align: right')
+  })
+
+  test('align changes only the alignment', () => {
+    for (const align of ['left', 'center', 'right'] as const) {
+      expect(runCommand({ ...off, length: 40 }, `align ${align}`).config).toEqual({ enabled: false, char: '🔥', length: 40, align })
+    }
+  })
+
+  test('other commands keep the alignment', () => {
+    const right: Config = { ...on, align: 'right' }
+    expect(runCommand(right, 'off').config?.align).toBe('right')
+    expect(runCommand(right, 'set =').config?.align).toBe('right')
+    expect(runCommand(right, 'length 40', 80).config?.align).toBe('right')
+    expect(runCommand(right, 'length full', 80).config?.align).toBe('right')
+  })
+
+  test('an alignment that is not left, center or right changes nothing and does not repeat the input', () => {
+    for (const args of ['align', 'align ', 'align middle', 'align LEFT', 'align Center', 'align left right', 'align 1', 'align \x1b[31m', 'align \u202e']) {
+      const result = runCommand(on, args)
+      expect(result.config).toBeUndefined()
+      expect(result.text).toContain('Use left, center or right. Nothing changed.')
+      expect(result.text).not.toContain('\x1b')
+      expect(result.text).not.toContain('\u202e')
+    }
   })
 
   test('no arguments reports the state and changes nothing', () => {
     expect(runCommand(on, '').config).toBeUndefined()
     expect(runCommand(on, '  ').text).toContain('on, character: -')
     expect(runCommand(off, '').text).toContain('off, character: 🔥')
-    expect(runCommand({ enabled: true, char: ' ', length: null }, '').text).toContain('character: space')
+    expect(runCommand({ enabled: true, char: ' ', length: null, align: 'center' }, '').text).toContain('character: space')
   })
 
   test('set changes only the character, on or off', () => {
-    expect(runCommand(on, 'set 🔥').config).toEqual({ enabled: true, char: '🔥', length: null })
+    expect(runCommand(on, 'set 🔥').config).toEqual({ enabled: true, char: '🔥', length: null, align: 'center' })
     const result = runCommand(off, 'set =')
-    expect(result.config).toEqual({ enabled: false, char: '=', length: null })
+    expect(result.config).toEqual({ enabled: false, char: '=', length: null, align: 'center' })
     expect(result.text).toContain('/mod-divider on')
   })
 
