@@ -12,6 +12,16 @@ Install, at the Claude Code prompt:
 /plugin install mod-divider --marketplace z0rd0n88/claude-mod-ity
 ```
 
+**It has to load before the mods it divides.** Mods wrap each other in load order, and this one only sees the mods that load after it. A link in `~/.claude/skills` loads last, so `/mod-divider` responds but no line appears. A `/plugin install` has not been tested and may have the same problem if your other mods come first.
+
+To load it first, clone this repo and name the mod's folder in the `env` block of `~/.claude/settings.json`, separating several folders with `:`:
+
+```json
+"CLAUDE_CODE_PLUGIN_DIRS": "/path/to/claude-mod-ity/mods/mod-divider"
+```
+
+Start a new session afterwards. A value set in `settings.json` takes priority over the same variable set in your shell.
+
 | Command | What it does |
 |---|---|
 | `/mod-divider` | Shows the current settings |
