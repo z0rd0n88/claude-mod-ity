@@ -32,6 +32,7 @@ describe('github-panel', () => {
   test('/github and the footer mark toggle the pane; the pane lists gh issues', async ($, on) => {
     const opened: string[] = []
     on('session.start', ($, e) => ({ cwd: e.cwd }))
+    on('ui.status', () => ({ value: undefined }))
     on('command.register', ($, e) => ({ value: { command: e.name } }))
     on('ui.open', ($, e) => {
       opened.push(e.id)
@@ -67,10 +68,9 @@ describe('github-panel', () => {
     expect(opened).toEqual(['github'])
 
     const footer = await $.ui.mount({ plugin: 'github-panel', surface: 'desktop', ...FOOTER })
-    expect(await footer.find({ type: 'Svg' })).toBeDefined()
-    expect(await footer.find({ type: 'Text', text: /GitHub/ })).toBeUndefined()
+    expect(await footer.find({ type: 'Markdown', text: /favicon\.svg/ })).toBeDefined()
     expect(await footer.find({ type: 'Text', text: /focus/ })).toBeDefined()
-    await footer.press({ key: 'open-github' })
+    await footer.press({ key: 'open-github', link: { href: 'https://github.com/#toggle-github-panel' } })
     expect(opened).toEqual([])
 
     const pane = await $.ui.mount({ plugin: 'github-panel', surface: 'desktop', ...PANE })
