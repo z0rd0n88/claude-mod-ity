@@ -13,16 +13,9 @@ const PANE = {
   },
 } as const
 
-const BAND = {
-  component: 'AbovePrompt',
-  props: {
-    hasSurvey: false,
-    isWorking: false,
-    maxRows: 10,
-    bodyColumns: 80,
-    scroll: { offset: 0, bodyRows: 10 },
-    view: {},
-  },
+const FOOTER = {
+  component: 'SessionMode',
+  props: { modes: ['focus'] },
 } as const
 
 const GH_JSON = JSON.stringify([
@@ -36,13 +29,8 @@ const GH_JSON = JSON.stringify([
 ])
 
 describe('github-panel', () => {
-  test('/github toggles the pane, the status line counts, the pane lists gh issues', async ($, on) => {
+  test('/github and the footer mark toggle the pane; the pane lists gh issues', async ($, on) => {
     const opened: string[] = []
-    const status: (string | undefined)[] = []
-    on('ui.status', ($, e) => {
-      status.push(e.text)
-      return { value: undefined }
-    })
     on('session.start', ($, e) => ({ cwd: e.cwd }))
     on('command.register', ($, e) => ({ value: { command: e.name } }))
     on('ui.open', ($, e) => {
@@ -59,14 +47,16 @@ describe('github-panel', () => {
       const { Box } = $.ui.resolve(e)
       return <Box key="engine" />
     })
-    on('process.run', () => ({
-      value: { exitCode: 0, stdout: GH_JSON, stderr: '', isStdoutTruncated: false, isStderrTruncated: false },
-    }))
+    let fetched = false
+    on('process.run', () => {
+      fetched = true
+      return { value: { exitCode: 0, stdout: GH_JSON, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
+    })
     await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/work' })
 
     // session.start kicked off one fetch in the background; let it settle
-    for (let i = 0; i < 200 && status.at(-1) !== 'GitHub · 1 open · /github'; i++) await Promise.resolve()
-    expect(status.at(-1)).toBe('GitHub · 1 open · /github')
+    for (let i = 0; i < 200 && !fetched; i++) await Promise.resolve()
+    expect(fetched).toBe(true)
 
     const run = { origin: { kind: 'composer' }, presentation: { isFullscreen: true, columns: 120 } } as const
     await $.command.run({ command: 'github', args: '', ...run })
@@ -76,10 +66,11 @@ describe('github-panel', () => {
     await $.command.run({ command: 'github', args: '', ...run })
     expect(opened).toEqual(['github'])
 
-    const band = await $.ui.mount({ plugin: 'github-panel', surface: 'desktop', ...BAND })
-    expect(await band.find({ type: 'Svg' })).toBeDefined()
-    expect(await band.find({ type: 'Text', text: /GitHub/ })).toBeUndefined()
-    await band.press({ key: 'open-github' })
+    const footer = await $.ui.mount({ plugin: 'github-panel', surface: 'desktop', ...FOOTER })
+    expect(await footer.find({ type: 'Svg' })).toBeDefined()
+    expect(await footer.find({ type: 'Text', text: /GitHub/ })).toBeUndefined()
+    expect(await footer.find({ type: 'Text', text: /focus/ })).toBeDefined()
+    await footer.press({ key: 'open-github' })
     expect(opened).toEqual([])
 
     const pane = await $.ui.mount({ plugin: 'github-panel', surface: 'desktop', ...PANE })

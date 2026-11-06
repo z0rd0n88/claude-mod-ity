@@ -24,7 +24,6 @@ async function fetchIssues($: EngineInterface): Promise<void> {
   )
   if (ran.exitCode !== 0) {
     await update($, feed, f => ({ ...f, error: ran.stderr.trim() || `gh exited ${ran.exitCode}` }))
-    $.ui.status('GitHub · gh error · /github')
     return
   }
   type Row = { number: number; title: string; url: string; updatedAt: string; repository: { nameWithOwner: string } }
@@ -33,7 +32,6 @@ async function fetchIssues($: EngineInterface): Promise<void> {
     number: r.number, title: r.title, url: r.url, updatedAt: r.updatedAt, repo: r.repository.nameWithOwner,
   }))
   await update($, feed, () => ({ issues, fetchedAt: new Date().toISOString() }))
-  $.ui.status(`GitHub · ${issues.length} open · /github`)
 }
 
 async function openPane($: EngineInterface): Promise<void> {
@@ -51,7 +49,6 @@ export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command.register({ name: 'github', description: 'Toggle the GitHub issues pane' })
     const started = await next(e)
-    $.ui.status('GitHub · /github')
     void fetchIssues($)
     return started
   })
@@ -61,31 +58,30 @@ export const register: Register = on => {
     return { text: 'GitHub pane toggled.' }
   })
 
-  // The band above the prompt: the favicon alone. Only a Button takes a
-  // click, so a one-character plain button is laid over the mark.
-  on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
-    if (e.props.hasSurvey) return next(e)
-    const below = await next(e) // what the other mods (status line) draw
+  // The prompt footer's mode labels (right of the model name on Desktop):
+  // the favicon alone, then the engine's own labels. Only a Button takes a
+  // click, so a blank plain button is laid over the mark.
+  on('ui.render', { component: 'SessionMode' }, async ($, e, next) => {
     const toggle = { key: 'open-github', plain: true as const, onPress: () => void togglePane($) }
     if (e.surface === 'terminal') {
-      const { Box, Button } = $.ui.resolve(e)
+      const { Box, Text, Button } = $.ui.resolve(e)
       return (
-        <Box flexDirection="column">
-          <Box><Button {...toggle}>GitHub</Button></Box>
-          {below}
+        <Box gap={1}>
+          <Button {...toggle} dimColor>GitHub</Button>
+          {e.props.modes.length > 0 && <Text dimColor>{e.props.modes.join(' & ')}</Text>}
         </Box>
       )
     }
-    const { Box, Button, Svg } = $.ui.resolve(e)
+    const { Box, Text, Button, Svg } = $.ui.resolve(e)
     return (
-      <Box flexDirection="column">
+      <Box alignItems="center" gap={1}>
         <Box key="github-mark" width={3} height={1}>
           <Svg source={MARK} alt="GitHub" width={18} height={18} />
           <Box position="absolute" top={0} left={0} width={3} height={1} overflow="hidden">
             <Button {...toggle} label="\u2007\u2007" />
           </Box>
         </Box>
-        {below}
+        {e.props.modes.length > 0 && <Text dimColor>{e.props.modes.join(' & ')}</Text>}
       </Box>
     )
   })
