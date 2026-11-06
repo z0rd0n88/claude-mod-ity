@@ -65,3 +65,23 @@ An emoji newer than the Unicode version your Claude Code knows may be rejected t
 ### Changes from band-divider
 
 This mod was called `band-divider`. Its `pattern` setting, which allowed several characters, is gone, and `/mod-divider set` replaces it. Everyone starts at the default `-`.
+
+## github-panel
+
+Shows the GitHub issues assigned to you in a pane beside the chat, inside the terminal or Claude Desktop. The GitHub mark and a **GitHub** button sit above the prompt; the button toggles the pane. `/github` opens it too.
+
+The pane lists your open issues, newest first, each a link to GitHub, with a Refresh button. Data comes from the GitHub CLI: `gh search issues --assignee @me --state open`. `gh` must be installed and logged in (`gh auth status`).
+
+Install, at the Claude Code prompt:
+
+```
+/plugin install github-panel --marketplace z0rd0n88/claude-mod-ity
+```
+
+Or load it from a clone, in the `env` block of `~/.claude/settings.json`:
+
+```json
+"CLAUDE_CODE_PLUGIN_DIRS": "/path/to/claude-mod-ity/mods/github-panel"
+```
+
+Only text is pressable in a mod, so the mark is drawn beside the button rather than being the button. Tracer bullet so far; planned: PRs tab, repo filter, search, opening an issue inside the pane.

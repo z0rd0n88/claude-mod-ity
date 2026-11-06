@@ -1,12 +1,19 @@
 {
   "name": "claude-mod-ity",
   "description": "Claude Code mods. They are commodities.",
-  "owner": { "name": "Alex Fielder" },
+  "owner": {
+    "name": "Alex Fielder"
+  },
   "plugins": [
     {
       "name": "mod-divider",
       "source": "./mods/mod-divider",
       "description": "Draws a divider line, in a character you choose, between the bands other mods show above the prompt."
+    },
+    {
+      "name": "github-panel",
+      "source": "./mods/github-panel",
+      "description": "GitHub issues assigned to you, in a pane inside Claude Code and Claude Desktop. A button above the prompt toggles it."
     }
   ]
 }
