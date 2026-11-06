@@ -68,7 +68,7 @@ This mod was called `band-divider`. Its `pattern` setting, which allowed several
 
 ## github-panel
 
-Shows the GitHub issues assigned to you in a pane beside the chat, inside the terminal or Claude Desktop. A `⎇` mark sits in the prompt footer, beside the model name on Desktop, and toggles the pane on click. `/github` toggles it too.
+Shows the GitHub issues assigned to you in a pane beside the chat, inside the terminal or Claude Desktop. A `𝔊ℌ` mark sits in the prompt footer, beside the model name on Desktop, and toggles the pane on click. `/github` toggles it too.
 
 The pane lists your open issues, newest first, each a link to GitHub, with a Refresh button. Data comes from the GitHub CLI: `gh search issues --assignee @me --state open`. `gh` must be installed and logged in (`gh auth status`).
 
