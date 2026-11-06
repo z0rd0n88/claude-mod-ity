@@ -84,4 +84,4 @@ Or load it from a clone, in the `env` block of `~/.claude/settings.json`:
 "CLAUDE_CODE_PLUGIN_DIRS": "/path/to/claude-mod-ity/mods/github-panel"
 ```
 
-The footer slot is the session-mode labels (`focus`, `memory paused`); the mod draws the mark first and keeps those labels after it. The mark is a Markdown image link, so the click on the image is the press. Tracer bullet so far; planned: PRs tab, repo filter, search, opening an issue inside the pane.
+The footer slot is the session-mode labels (`focus`, `memory paused`); the mod draws the mark first and keeps those labels after it. Only a button takes a click, so a blank button sits over the mark and shows only while the pointer is on it. Tracer bullet so far; planned: PRs tab, repo filter, search, opening an issue inside the pane.
