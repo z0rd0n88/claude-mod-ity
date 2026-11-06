@@ -68,7 +68,7 @@ This mod was called `band-divider`. Its `pattern` setting, which allowed several
 
 ## github-panel
 
-Shows the GitHub issues assigned to you in a pane beside the chat, inside the terminal or Claude Desktop. A `GitHub · N open` entry sits in the status row under the prompt, next to the model name on Desktop. `/github` toggles the pane.
+Shows the GitHub issues assigned to you in a pane beside the chat, inside the terminal or Claude Desktop. The GitHub mark sits above the prompt and toggles the pane on click; a `GitHub · N open` entry sits in the status row under the prompt, next to the model name on Desktop. `/github` toggles the pane too.
 
 The pane lists your open issues, newest first, each a link to GitHub, with a Refresh button. Data comes from the GitHub CLI: `gh search issues --assignee @me --state open`. `gh` must be installed and logged in (`gh auth status`).
 
@@ -84,4 +84,4 @@ Or load it from a clone, in the `env` block of `~/.claude/settings.json`:
 "CLAUDE_CODE_PLUGIN_DIRS": "/path/to/claude-mod-ity/mods/github-panel"
 ```
 
-The status row is text only, so the entry shows the count and the command; the toggle itself is `/github`. Tracer bullet so far; planned: PRs tab, repo filter, search, opening an issue inside the pane.
+The status row is text only, so the entry shows the count and the command. Only a button takes a click, so the mark has a blank one-character button laid over it. Tracer bullet so far; planned: PRs tab, repo filter, search, opening an issue inside the pane.

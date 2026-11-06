@@ -13,6 +13,18 @@ const PANE = {
   },
 } as const
 
+const BAND = {
+  component: 'AbovePrompt',
+  props: {
+    hasSurvey: false,
+    isWorking: false,
+    maxRows: 10,
+    bodyColumns: 80,
+    scroll: { offset: 0, bodyRows: 10 },
+    view: {},
+  },
+} as const
+
 const GH_JSON = JSON.stringify([
   {
     number: 60,
@@ -63,6 +75,12 @@ describe('github-panel', () => {
     expect(opened).toEqual([])
     await $.command.run({ command: 'github', args: '', ...run })
     expect(opened).toEqual(['github'])
+
+    const band = await $.ui.mount({ plugin: 'github-panel', surface: 'desktop', ...BAND })
+    expect(await band.find({ type: 'Svg' })).toBeDefined()
+    expect(await band.find({ type: 'Text', text: /GitHub/ })).toBeUndefined()
+    await band.press({ key: 'open-github' })
+    expect(opened).toEqual([])
 
     const pane = await $.ui.mount({ plugin: 'github-panel', surface: 'desktop', ...PANE })
     expect(await pane.find({ type: 'Link', text: /#60 Verify iOS build/ })).toBeDefined()

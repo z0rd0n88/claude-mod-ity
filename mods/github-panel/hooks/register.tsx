@@ -61,6 +61,35 @@ export const register: Register = on => {
     return { text: 'GitHub pane toggled.' }
   })
 
+  // The band above the prompt: the favicon alone. Only a Button takes a
+  // click, so a one-character plain button is laid over the mark.
+  on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
+    if (e.props.hasSurvey) return next(e)
+    const below = await next(e) // what the other mods (status line) draw
+    const toggle = { key: 'open-github', plain: true as const, onPress: () => void togglePane($) }
+    if (e.surface === 'terminal') {
+      const { Box, Button } = $.ui.resolve(e)
+      return (
+        <Box flexDirection="column">
+          <Box><Button {...toggle}>GitHub</Button></Box>
+          {below}
+        </Box>
+      )
+    }
+    const { Box, Button, Svg } = $.ui.resolve(e)
+    return (
+      <Box flexDirection="column">
+        <Box key="github-mark" width={3} height={1}>
+          <Svg source={MARK} alt="GitHub" width={18} height={18} />
+          <Box position="absolute" top={0} left={0} width={3} height={1} overflow="hidden">
+            <Button {...toggle} label="\u2007\u2007" />
+          </Box>
+        </Box>
+        {below}
+      </Box>
+    )
+  })
+
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const { Box, Text, Button, Link } = $.ui.resolve(e)
     const mark = e.surface === 'terminal' ? null : (() => { const { Svg } = $.ui.resolve(e); return <Svg source={MARK} alt="GitHub" width={16} height={16} /> })()
