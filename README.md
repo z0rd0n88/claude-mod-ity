@@ -68,7 +68,7 @@ This mod was called `band-divider`. Its `pattern` setting, which allowed several
 
 ## github-panel
 
-Shows the GitHub issues assigned to you in a pane beside the chat, inside the terminal or Claude Desktop. The GitHub mark sits in the prompt footer, beside the model name on Desktop, and toggles the pane on click. `/github` toggles it too.
+Shows the GitHub issues assigned to you in a pane beside the chat, inside the terminal or Claude Desktop. A `⎇` mark sits in the prompt footer, beside the model name on Desktop, and toggles the pane on click. `/github` toggles it too.
 
 The pane lists your open issues, newest first, each a link to GitHub, with a Refresh button. Data comes from the GitHub CLI: `gh search issues --assignee @me --state open`. `gh` must be installed and logged in (`gh auth status`).
 
@@ -84,4 +84,4 @@ Or load it from a clone, in the `env` block of `~/.claude/settings.json`:
 "CLAUDE_CODE_PLUGIN_DIRS": "/path/to/claude-mod-ity/mods/github-panel"
 ```
 
-The footer slot is the session-mode labels (`focus`, `memory paused`); the mod draws the mark first and keeps those labels after it. Only a button takes a click, so a blank button sits over the mark and shows only while the pointer is on it. Tracer bullet so far; planned: PRs tab, repo filter, search, opening an issue inside the pane.
+The footer slot is the session-mode labels (`focus`, `memory paused`); the mod draws the mark first and keeps those labels after it. That slot draws no images on Desktop (an SVG comes out as an empty frame), so the mark is a glyph, not GitHub's favicon. Tracer bullet so far; planned: PRs tab, repo filter, search, opening an issue inside the pane.

@@ -68,8 +68,7 @@ describe('github-panel', () => {
     expect(opened).toEqual(['github'])
 
     const footer = await $.ui.mount({ plugin: 'github-panel', surface: 'desktop', ...FOOTER })
-    expect(await footer.find({ type: 'Svg' })).toBeDefined()
-    expect(await footer.find({ type: 'Text', text: /GitHub/ })).toBeUndefined()
+    expect(await footer.find({ type: 'Button', key: 'open-github' })).toBeDefined()
     expect(await footer.find({ type: 'Text', text: /focus/ })).toBeDefined()
     await footer.press({ key: 'open-github' })
     expect(opened).toEqual([])
