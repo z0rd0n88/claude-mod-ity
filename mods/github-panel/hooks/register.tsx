@@ -58,14 +58,14 @@ export const register: Register = on => {
   })
 
   // The prompt footer's mode labels (right of the model name on Desktop):
-  // a one-glyph plain button toggles the pane, then the engine's own labels.
+  // a Fraktur 𝔊ℌ plain button toggles the pane, then the engine's own labels.
   // (This slot draws no images on Desktop, so no favicon.)
   on('ui.render', { component: 'SessionMode' }, ($, e) => {
     const { Box, Text, Button } = $.ui.resolve(e)
     const modes = e.props.modes.join(' & ')
     return (
       <Box gap={1}>
-        <Button key="open-github" plain dimColor onPress={() => void togglePane($)}>{'\u2387'}</Button>
+        <Button key="open-github" plain dimColor onPress={() => void togglePane($)}>{'\u{1D50A}\u210c'}</Button>
         {modes !== '' && <Text dimColor>{modes}</Text>}
       </Box>
     )
