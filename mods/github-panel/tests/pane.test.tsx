@@ -13,18 +13,6 @@ const PANE = {
   },
 } as const
 
-const BAND = {
-  component: 'AbovePrompt',
-  props: {
-    hasSurvey: false,
-    isWorking: false,
-    maxRows: 10,
-    bodyColumns: 80,
-    scroll: { offset: 0, bodyRows: 10 },
-    view: {},
-  },
-} as const
-
 const GH_JSON = JSON.stringify([
   {
     number: 60,
@@ -36,8 +24,13 @@ const GH_JSON = JSON.stringify([
 ])
 
 describe('github-panel', () => {
-  test('the hint button opens the pane and the pane lists gh issues', async ($, on) => {
+  test('/github toggles the pane, the status line counts, the pane lists gh issues', async ($, on) => {
     const opened: string[] = []
+    const status: (string | undefined)[] = []
+    on('ui.status', ($, e) => {
+      status.push(e.text)
+      return { value: undefined }
+    })
     on('session.start', ($, e) => ({ cwd: e.cwd }))
     on('command.register', ($, e) => ({ value: { command: e.name } }))
     on('ui.open', ($, e) => {
@@ -59,13 +52,16 @@ describe('github-panel', () => {
     }))
     await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/work' })
 
-    const band = await $.ui.mount({ plugin: 'github-panel', surface: 'desktop', ...BAND })
-    expect(await band.find({ type: 'Button', key: 'open-github' })).toBeDefined()
-    await band.press({ key: 'open-github' })
+    // session.start kicked off one fetch in the background; let it settle
+    for (let i = 0; i < 200 && status.at(-1) !== 'GitHub · 1 open · /github'; i++) await Promise.resolve()
+    expect(status.at(-1)).toBe('GitHub · 1 open · /github')
+
+    const run = { origin: { kind: 'composer' }, presentation: { isFullscreen: true, columns: 120 } } as const
+    await $.command.run({ command: 'github', args: '', ...run })
     expect(opened).toEqual(['github'])
-    await band.press({ key: 'open-github' })
+    await $.command.run({ command: 'github', args: '', ...run })
     expect(opened).toEqual([])
-    await band.press({ key: 'open-github' })
+    await $.command.run({ command: 'github', args: '', ...run })
     expect(opened).toEqual(['github'])
 
     const pane = await $.ui.mount({ plugin: 'github-panel', surface: 'desktop', ...PANE })
