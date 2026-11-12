@@ -31,14 +31,15 @@ function asText(messages: readonly SessionMessage[]): string {
         t =>
           `[tool ${t.tool} ${JSON.stringify(t.input).slice(0, 300)}]${t.isError ? ' (error)' : ''}` +
           // Continuation lines are indented so a tool result can never start a top-level `ROLE:` line
-          (t.text ? `\n[result] ${t.text.slice(0, 800).replace(/\n/g, '\n  ')}` : ''),
+          (t.text ? `\n[result] ${t.text.slice(0, 800).replace(/\r\n?|\n|\u2028|\u2029/g, '\n  ')}` : ''),
       )
       return `${m.role.toUpperCase()}: ${[m.text, ...tools].filter(Boolean).join('\n')}`
     })
     .join('\n\n')
   // A transcript tag inside the transcript (a tool result, say) must not open or close it early, whatever its
   // spacing or attributes. Broken, not stripped, so a nested one cannot reassemble.
-  return (text.length > MAX_CHARS ? text.slice(-MAX_CHARS) : text).replace(/<(\s*\/?\s*transcript\b[^>]*)>/gi, '<\\$1>')
+  // A cut head is marked as a fragment, so it cannot read as a top-level role line either.
+  return (text.length > MAX_CHARS ? `…${text.slice(-MAX_CHARS)}` : text).replace(/<(\s*\/?\s*transcript\b[^>]*)>/gi, '<\\$1>')
 }
 
 async function compact($: EngineInterface): Promise<void> {
