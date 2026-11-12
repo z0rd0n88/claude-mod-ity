@@ -39,7 +39,7 @@ function asText(messages: readonly SessionMessage[]): string {
   // A transcript tag inside the transcript (a tool result, say) must not open or close it early, whatever its
   // spacing or attributes. Broken, not stripped, so a nested one cannot reassemble.
   // A cut head is marked as a fragment, so it cannot read as a top-level role line either.
-  return (text.length > MAX_CHARS ? `…${text.slice(-MAX_CHARS)}` : text).replace(/<(\s*\/?\s*transcript\b[^>]*)>/gi, '<\\$1>')
+  return (text.length > MAX_CHARS ? `…${text.slice(-MAX_CHARS)}` : text).replace(/<(\s*\/?\s*transcript\b[^<>]*)>/gi, '<\\$1>')
 }
 
 async function compact($: EngineInterface): Promise<void> {
