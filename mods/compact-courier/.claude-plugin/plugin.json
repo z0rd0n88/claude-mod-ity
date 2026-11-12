@@ -1,0 +1,10 @@
+{
+  "name": "compact-courier",
+  "version": "0.1.0",
+  "description": "A Compact button in the prompt footer: Haiku summarizes the session in detail and that summary becomes the compaction.",
+  "author": {
+    "name": "Alex Fielder"
+  },
+  "license": "MIT",
+  "types": "./types/index.d.ts"
+}

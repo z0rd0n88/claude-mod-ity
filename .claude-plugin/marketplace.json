@@ -14,6 +14,11 @@
       "name": "github-panel",
       "source": "./mods/github-panel",
       "description": "GitHub issues assigned to you, in a pane inside Claude Code and Claude Desktop. A button above the prompt toggles it."
+    },
+    {
+      "name": "compact-courier",
+      "source": "./mods/compact-courier",
+      "description": "A Compact button in the prompt footer: Haiku summarizes the session in detail and that summary becomes the compaction."
     }
   ]
 }

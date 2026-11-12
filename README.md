@@ -85,3 +85,23 @@ Or load it from a clone, in the `env` block of `~/.claude/settings.json`:
 ```
 
 The footer slot is the session-mode labels (`focus`, `memory paused`); the mod draws the mark first and keeps those labels after it. That slot draws no images on Desktop (an SVG comes out as an empty frame), so the mark is a glyph, not GitHub's favicon. Tracer bullet so far; planned: PRs tab, repo filter, search, opening an issue inside the pane.
+
+## compact-courier
+
+A `Compact` button in the prompt footer, beside the model name on Desktop. Clicking it has Haiku write a detailed summary of the session (your requests, decisions, files changed, commands and errors, current state and the next step), then sends `/compact <that summary>` as if you typed it. The mod answers that compaction with Haiku's summary itself, so your main model makes no call for it. The button is written in the same Fraktur letters as the GH mark, `ℭ𝔬𝔪𝔭𝔞𝔠𝔱`, and reads `ℭ𝔬𝔪𝔭𝔞𝔠𝔱𝔦𝔫𝔤…` while it works. A `/compact` you type yourself, and auto-compact, still use Claude Code's own summarizer.
+
+Install, at the Claude Code prompt:
+
+```
+/plugin install compact-courier --marketplace z0rd0n88/claude-mod-ity
+```
+
+Or load it from a clone, in the `env` block of `~/.claude/settings.json`:
+
+```json
+"CLAUDE_CODE_PLUGIN_DIRS": "/path/to/claude-mod-ity/mods/compact-courier"
+```
+
+The command is queued like a typed one, so a click mid-turn compacts when the turn ends. Haiku reads the newest ~400,000 characters of the transcript (about 100k tokens); on a longer session the oldest part is left out of the summary. If Haiku returns nothing, no `/compact` is sent and a toast says why.
+
+`github-panel` draws the same footer slot and does not pass it on, so with both loaded, `compact-courier` should load first or its button is hidden: name it first in `CLAUDE_CODE_PLUGIN_DIRS`. This follows from how mods wrap each other in load order; it has not been tried live.
