@@ -30,7 +30,8 @@ function asText(messages: readonly SessionMessage[]): string {
       const tools = m.toolUses.map(
         t =>
           `[tool ${t.tool} ${JSON.stringify(t.input).slice(0, 300)}]${t.isError ? ' (error)' : ''}` +
-          (t.text ? `\n[result] ${t.text.slice(0, 800)}` : ''),
+          // Continuation lines are indented so a tool result can never start a top-level `ROLE:` line
+          (t.text ? `\n[result] ${t.text.slice(0, 800).replace(/\n/g, '\n  ')}` : ''),
       )
       return `${m.role.toUpperCase()}: ${[m.text, ...tools].filter(Boolean).join('\n')}`
     })
