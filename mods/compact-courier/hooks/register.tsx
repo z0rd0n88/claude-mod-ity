@@ -60,7 +60,8 @@ async function compact($: EngineInterface): Promise<void> {
     pending = r.text
     // The real /compact, as if typed, queued until the turn ends. The summary
     // rides as its instructions too, so if our hook is ever bypassed the
-    // engine's summarizer still works from it.
+    // engine's summarizer still works from it. On that path it is unlabelled:
+    // the engine reads instructions as the person's, with no provenance field.
     await $.command.run({ command: 'compact', args: r.text })
   } catch (err) {
     $.ui.toast(`Compact failed: ${err instanceof Error ? err.message : String(err)}`)
