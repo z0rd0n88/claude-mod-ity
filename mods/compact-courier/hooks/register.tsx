@@ -29,7 +29,7 @@ function asText(messages: readonly SessionMessage[]): string {
     .map(m => {
       const tools = m.toolUses.map(
         t =>
-          `[tool ${t.tool} ${JSON.stringify(t.input).slice(0, 300)}]${t.isError ? ' (error)' : ''}` +
+          `[tool ${t.tool} ${JSON.stringify(t.input).slice(0, 300).replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029')}]${t.isError ? ' (error)' : ''}` +
           // Continuation lines are indented so a tool result can never start a top-level `ROLE:` line
           (t.text ? `\n[result] ${t.text.slice(0, 800).replace(/\r\n?|\n|\u2028|\u2029/g, '\n  ')}` : ''),
       )
@@ -37,9 +37,10 @@ function asText(messages: readonly SessionMessage[]): string {
     })
     .join('\n\n')
   // A transcript tag inside the transcript (a tool result, say) must not open or close it early, whatever its
-  // spacing or attributes. Broken, not stripped, so a nested one cannot reassemble.
+  // spacing, attributes or missing '>'. Every '<' that starts one is broken, not stripped, so a nested one
+  // cannot reassemble. JSON.stringify leaves U+2028/2029 raw, so the tool line escapes them itself.
   // A cut head is marked as a fragment, so it cannot read as a top-level role line either.
-  return (text.length > MAX_CHARS ? `…${text.slice(-MAX_CHARS)}` : text).replace(/<(\s*\/?\s*transcript\b[^<>]*)>/gi, '<\\$1>')
+  return (text.length > MAX_CHARS ? `…${text.slice(-MAX_CHARS)}` : text).replace(/<(?=\s*\/?\s*transcript\b)/gi, '<\\')
 }
 
 async function compact($: EngineInterface): Promise<void> {
