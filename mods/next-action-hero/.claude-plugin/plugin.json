@@ -1,0 +1,10 @@
+{
+  "name": "next-action-hero",
+  "version": "0.1.0",
+  "description": "Buttons above the prompt for the choices Claude's last reply offered: yes/no, A/B/C, list items, Next: lines. A click sends that choice as your prompt.",
+  "author": {
+    "name": "Alex Fielder"
+  },
+  "license": "MIT",
+  "types": "./types/index.d.ts"
+}
