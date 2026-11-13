@@ -84,6 +84,11 @@ describe('findChoices', () => {
     expect(findChoices(answer)).toEqual(['tick the last test-plan box on z0rd0n88/JevDev#73 — it’s the one that says “After merge”.'])
   })
 
+  test('a choice too long to show whole is dropped, and hidden characters are cleared', () => {
+    expect(findChoices(`Next: ${'run it '.repeat(30)}now.`)).toEqual([])
+    expect(findChoices('Next: say “go\u202e” and I’ll start.')).toEqual(['go'])
+  })
+
   test('a reply with no question or choices gets nothing', () => {
     const answer = [
       'Scores landed between 0.52 and 0.74.',

@@ -7,7 +7,8 @@ import type { Choices } from '../types'
 const choices = atom({ plugin: 'next-action-hero', key: 'choices' } as const, [] as Choices)
 
 const MAX = 8
-const LABEL = 60
+// A button shows its whole text, the exact prompt a click sends; a longer choice is dropped, never cut.
+const MAX_CHARS = 160
 
 // A yes/no question opens with one of these.
 const YES_NO = /^(?:should|shall|can|may) (?:i|we)\b|^(?:want|ok|okay) (?:me )?to\b|^(?:do|would) you (?:want|like)\b|^ready (?:for me )?to\b/i
@@ -49,8 +50,8 @@ export function findChoices(answer: string): string[] {
   const lines = answer.replace(/```[\s\S]*?```/g, '').split('\n')
   const out: string[] = []
   const add = (s: string): void => {
-    const t = plain(s)
-    if (t && !out.some(o => o.toLowerCase() === t.toLowerCase())) out.push(t)
+    const t = plain(s.replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g, ' '))
+    if (t && t.length <= MAX_CHARS && !out.some(o => o.toLowerCase() === t.toLowerCase())) out.push(t)
   }
 
   let intro = ''
@@ -90,10 +91,6 @@ export function findChoices(answer: string): string[] {
   return out.slice(0, MAX)
 }
 
-function label(s: string): string {
-  return s.length > LABEL ? `${s.slice(0, LABEL - 1)}…` : s
-}
-
 async function choose($: EngineInterface, text: string): Promise<void> {
   await update($, choices, () => [])
   await $.prompt.submit({ text, asUser: true })
@@ -121,7 +118,7 @@ export const register: Register = on => {
       <Box flexDirection="column">
         <Box flexWrap="wrap" gap={1}>
           {list.map((c, i) => (
-            <Button key={`choice-${i}`} label={label(c)} onPress={() => void choose($, c)} />
+            <Button key={`choice-${i}`} label={c} onPress={() => void choose($, c)} />
           ))}
         </Box>
         {below}
