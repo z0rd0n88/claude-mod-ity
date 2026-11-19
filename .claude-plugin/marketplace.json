@@ -2,7 +2,7 @@
   "name": "claude-mod-ity",
   "description": "Claude Code mods. They are commodities.",
   "owner": {
-    "name": "Alex Fielder"
+    "name": "z0rd0n88"
   },
   "plugins": [
     {
@@ -19,6 +19,11 @@
       "name": "compact-courier",
       "source": "./mods/compact-courier",
       "description": "A Compact button in the prompt footer: Haiku summarizes the session in detail and that summary becomes the compaction."
+    },
+    {
+      "name": "next-action-hero",
+      "source": "./mods/next-action-hero",
+      "description": "Buttons above the prompt for the choices Claude's last reply offered: yes/no, A/B/C, list items, Next: lines. A click sends that choice as your prompt."
     }
   ]
 }
