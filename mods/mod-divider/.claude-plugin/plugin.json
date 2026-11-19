@@ -2,7 +2,7 @@
   "name": "mod-divider",
   "version": "0.2.0",
   "description": "Draws a divider line, in a character you choose, between the bands other mods show above the prompt.",
-  "author": { "name": "Alex Fielder" },
+  "author": { "name": "z0rd0n88" },
   "license": "MIT",
   "types": "./types/index.d.ts"
 }
