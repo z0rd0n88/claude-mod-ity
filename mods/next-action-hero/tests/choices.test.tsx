@@ -27,15 +27,29 @@ describe('findChoices', () => {
       '- #1042 needs your pick of logging option.',
       '- #1107 bullet 2 is still waiting on your decision.',
     ].join('\n')
-    expect(findChoices(answer)).toEqual([
-      'VistaMobileBE#1163 needs your call: should I fix the cursor 503 bug?',
-      '#1042 needs your pick of logging option.',
-      '#1107 bullet 2 is still waiting on your decision.',
-    ])
+    expect(findChoices(answer)).toEqual(['Start with VistaMobileBE#1163', 'Start with #1042', 'Start with #1107'])
   })
 
-  test('a "Next:" line gets one button that runs its action', () => {
-    expect(findChoices('Done.\n\nNext: run the migration on staging.')).toEqual(['run the migration on staging.'])
+  test('a list of short options keeps each option', () => {
+    expect(findChoices('Which one?\n- merge\n- rebase')).toEqual(['merge', 'rebase'])
+  })
+
+  test('a decision with no #ref is picked by its subject, else by its place in the list', () => {
+    expect(findChoices('Still open:\n- the logging option needs your pick.\n- #12 needs your call.')).toEqual(['Start with the logging option', 'Start with #12'])
+    expect(findChoices('Still open:\n- #12 needs your call.\n- how the logs should rotate.')).toEqual(['Start with #12', 'Start with item 2'])
+  })
+
+  test('a "Next:" line gets a reply, never a copy of the line', () => {
+    expect(findChoices('Done.\n\nNext: run the migration on staging.')).toEqual(['Done'])
+  })
+
+  test('a Next: line naming what Claude will do gets Go ahead', () => {
+    const answer = 'Next: when the work unit finishes, I’ll commit its changes and start the review unit. I’ll report phase 4’s result before starting phase 5.'
+    expect(findChoices(answer)).toEqual(['Go ahead'])
+  })
+
+  test('a Next: line asking you to do something gets Done', () => {
+    expect(findChoices('If it stops, tell me which key.\n\nNext: run the command above and tell me when it’s done.')).toEqual(['Done'])
   })
 
   test('a quoted reply to say becomes the button, not the whole Next line', () => {
@@ -75,17 +89,18 @@ describe('findChoices', () => {
     expect(findChoices(answer)).toEqual(['go'])
   })
 
-  test('screenshot 5: a Next: line runs its first sentence only', () => {
+  test('screenshot 5: a Next: line Claude offers to do gets Go ahead', () => {
     const answer = [
       'One thing to watch: those scores are close together. Jev scored every chunk between 0.52 and 0.74, all above the 0.2 drop floor.',
       '',
       'Next: tick the last test-plan box on [z0rd0n88/JevDev#73](https://x) — it’s the one that says “After merge”. Or say so and I’ll tick it.',
     ].join('\n')
-    expect(findChoices(answer)).toEqual(['tick the last test-plan box on z0rd0n88/JevDev#73 — it’s the one that says “After merge”.'])
+    expect(findChoices(answer)).toEqual(['Go ahead'])
   })
 
   test('a choice too long to show whole is dropped, and hidden characters are cleared', () => {
-    expect(findChoices(`Next: ${'run it '.repeat(30)}now.`)).toEqual([])
+    expect(findChoices(`Which one?\n- ${`${'x'.repeat(30)} `.repeat(6)}`)).toEqual([])
+    expect(findChoices(`Still open:\n- ${'the very long '.repeat(5)}option needs your pick.`)).toEqual(['Start with item 1'])
     expect(findChoices('Next: say “go\u202e” and I’ll start.')).toEqual(['go'])
   })
 

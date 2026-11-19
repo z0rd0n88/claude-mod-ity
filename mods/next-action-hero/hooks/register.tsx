@@ -56,6 +56,7 @@ export function findChoices(answer: string): string[] {
 
   let intro = ''
   let listIsChoice = false
+  let itemNo = 0
   lines.forEach((raw, i) => {
     const line = raw.trim()
     if (!line) return
@@ -66,8 +67,17 @@ export function findChoices(answer: string): string[] {
         const before = lines.slice(0, i).reverse().find(l => l.trim()) ?? ''
         listIsChoice = LIST_CUE.test(before)
         intro = before || '(start)'
+        itemNo = 0
       }
-      if (listIsChoice) add(item[1]!)
+      itemNo++
+      if (listIsChoice) {
+        // A short option is a reply as it stands; a sentence is a decision, so the reply picks it by its #ref.
+        const text = plain(item[1]!)
+        const ref = /[\w.-]*#\d+/.exec(text)?.[0]
+        const subject = /^((?:\S+\s+){0,7}?\S+)\s+(?:needs|is (?:still )?(?:waiting|open|up to)|awaits)\b/i.exec(text)?.[1]
+        if (text.split(' ').length <= 6 && !/[.?!]$/.test(text)) add(text)
+        else add(`Start with ${ref ?? subject ?? `item ${itemNo}`}`)
+      }
       return
     }
     intro = ''
@@ -76,7 +86,8 @@ export function findChoices(answer: string): string[] {
     said.forEach(add)
 
     const next = /^\W*next\W*:\W*\s*(.+)$/i.exec(line)
-    if (next && !said.length && !/:\s*$/.test(line)) add(sentences(next[1]!.replace(/^\W+/, ''))[0]!)
+    // A button is the user's reply, never Claude's line read back: approve Claude's step, or report the user's done.
+    if (next && !said.length && !/:\s*$/.test(line)) add(/\bI(?:['’]ll| will| can)\b/.test(next[1]!) ? 'Go ahead' : 'Done')
 
     for (const s of sentences(plain(line))) {
       const pick = PICK.exec(s)
