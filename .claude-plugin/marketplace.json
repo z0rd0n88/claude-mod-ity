@@ -24,6 +24,11 @@
       "name": "next-action-hero",
       "source": "./mods/next-action-hero",
       "description": "Buttons above the prompt for the choices Claude's last reply offered: yes/no, A/B/C, list items, Next: lines. A click sends that choice as your prompt."
+    },
+    {
+      "name": "fraktur-footer",
+      "source": "./mods/fraktur-footer",
+      "description": "Draws the prompt footer's mode labels (focus, memory paused) in the Fraktur letters of the GH and Compact buttons."
     }
   ]
 }

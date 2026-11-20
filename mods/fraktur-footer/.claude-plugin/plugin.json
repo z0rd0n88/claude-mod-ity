@@ -1,0 +1,9 @@
+{
+  "name": "fraktur-footer",
+  "version": "0.1.0",
+  "description": "Draws the prompt footer's mode labels (focus, memory paused) in the Fraktur letters of the GH and Compact buttons.",
+  "author": {
+    "name": "z0rd0n88"
+  },
+  "license": "MIT"
+}
