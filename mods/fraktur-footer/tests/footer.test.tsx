@@ -25,13 +25,14 @@ describe('fraktur-footer', () => {
     expect(await mounted.find({ type: 'Text', text: 'ℭℌℑℜℨ\u{1D504} 5.2' })).toBeDefined()
   })
 
-  test('no labels draws nothing extra', async ($, on) => {
+  test('what a mod beneath draws still shows, so the other footer mods keep their buttons', async ($, on) => {
+    // Beneath the mod: another footer mod's button (github-panel, compact-courier)
     on('ui.render', (_, e) => {
-      const { Text } = _.ui.resolve(e)
-      return <Text key="engine">{`[${(e.props as { modes: string[] }).modes.length}]`}</Text>
+      const { Button } = _.ui.resolve(e)
+      return <Button key="below" plain onPress={() => {}}>{'\u{1D50A}ℌ'}</Button>
     })
 
-    const mounted = await $.ui.mount({ plugin: 'fraktur-footer', surface: 'desktop', ...footer([]) })
-    expect(await mounted.find({ type: 'Text', text: '[0]' })).toBeDefined()
+    const mounted = await $.ui.mount({ plugin: 'fraktur-footer', surface: 'desktop', ...footer(['focus']) })
+    expect(await mounted.find({ type: 'Button', key: 'below', text: '\u{1D50A}ℌ' })).toBeDefined()
   })
 })
