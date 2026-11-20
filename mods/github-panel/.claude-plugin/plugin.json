@@ -1,6 +1,6 @@
 {
   "name": "github-panel",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "GitHub issues assigned to you, in a pane inside Claude Code and Claude Desktop. A button above the prompt toggles it.",
   "author": {
     "name": "z0rd0n88"

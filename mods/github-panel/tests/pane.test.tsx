@@ -43,10 +43,10 @@ describe('github-panel', () => {
       opened.splice(opened.indexOf(e.id), 1)
       return { value: undefined }
     })
-    // What the engine draws where the mod draws nothing
+    // What the engine or the next mod draws beneath this one (compact-courier's footer, the mode labels)
     on('ui.render', ($, e) => {
-      const { Box } = $.ui.resolve(e)
-      return <Box key="engine" />
+      const { Text } = $.ui.resolve(e)
+      return <Text key="engine">beneath</Text>
     })
     let fetched = false
     on('process.run', () => {
@@ -69,7 +69,8 @@ describe('github-panel', () => {
 
     const footer = await $.ui.mount({ plugin: 'github-panel', surface: 'desktop', ...FOOTER })
     expect(await footer.find({ type: 'Button', key: 'open-github', text: '\u{1D50A}ℌ' })).toBeDefined()
-    expect(await footer.find({ type: 'Text', text: /focus/ })).toBeDefined()
+    // The footer keeps the chain going, so another mod's footer button (compact-courier's) still draws
+    expect(await footer.find({ type: 'Text', text: /beneath/ })).toBeDefined()
     await footer.press({ key: 'open-github' })
     expect(opened).toEqual([])
 
