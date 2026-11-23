@@ -16,7 +16,14 @@ A cloud session runs in a fresh container. It does not read the `~/.claude/setti
 
 Which kind of session you are in is the environment shown in the row under the prompt box in Claude Desktop: Local, Cloud, SSH or WSL. A new session can start in a different one from the session you were in, and then it loads a different set of mods.
 
-Loading is not drawing. A mod draws only where the app showing the session attaches as a drawing surface; where none does, its hooks and commands run and nothing it draws shows (`$.session.surfaces()` is empty). In a cloud session on Claude Code 2.1.329, `next-action-hero` and `compact-courier` loaded and their `prompt.submit` hook ran, but the debug log said `session.start: raised (surface none, not interactive)`, no `ui.render` was ever asked for, and neither the choice buttons nor the Compact button appeared. That session was open in a browser at claude.ai, which never attached: `$.session.surfaces()` stayed `[]` across three restarts of the session's worker. The docs say the same for every cloud session, whichever app shows it: in [Where mods run](https://code.claude.com/docs/en/plugins/mods/overview#where-mods-run), a cloud session runs a mod's hooks and draws nothing, and Remote Control draws only in the terminal on your machine.
+Loading is not drawing. A mod draws only where the app showing the session attaches as a drawing surface; where none does, its hooks and commands run and nothing it draws shows (`$.session.surfaces()` is empty). The docs' [Where mods run](https://code.claude.com/docs/en/plugins/mods/overview#where-mods-run) table says a cloud session runs a mod's hooks and draws nothing, and Remote Control draws only in the terminal on your machine.
+
+What a cloud session did here, with `next-action-hero` and `compact-courier` loaded:
+
+- Claude Code 2.1.329, open in a browser at claude.ai: the `prompt.submit` hook ran, the debug log said `session.start: raised (surface none, not interactive)`, `$.session.surfaces()` stayed `[]` across three restarts of the session's worker, and nothing drew.
+- Claude Code 2.1.330, three days later, same session: a client calling itself `desktop` attached for three seconds, asked for `SessionMode` and `AbovePrompt` among others, both mods' `ui.render` hooks answered, and it detached. Which app that was, and whether anything showed, is not known.
+
+So a cloud session mostly has no surface but can get one. A mod should read `$.session.surfaces()` and not assume either way.
 
 The account route has not been tried with these mods yet.
 
