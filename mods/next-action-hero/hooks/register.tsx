@@ -102,6 +102,17 @@ export function findChoices(answer: string): string[] {
   return out.slice(0, MAX)
 }
 
+// Copied from fraktur-footer so the band's labels match the footer's; mods are separate plugins. Keep the two identical.
+// Fraktur capitals C H I R Z sit in the letterlike block, not in the gaps of U+1D504..
+const CAPITAL_GAPS: Record<string, string> = { C: 'ℭ', H: 'ℌ', I: 'ℑ', R: 'ℜ', Z: 'ℨ' }
+
+// Digits and punctuation have no Fraktur form and pass through.
+function fraktur(text: string): string {
+  return text.replace(/[A-Za-z]/g, ch =>
+    ch >= 'a' ? String.fromCodePoint(0x1d51e + ch.charCodeAt(0) - 97) : (CAPITAL_GAPS[ch] ?? String.fromCodePoint(0x1d504 + ch.charCodeAt(0) - 65)),
+  )
+}
+
 async function choose($: EngineInterface, text: string): Promise<void> {
   await update($, choices, () => [])
   await $.prompt.submit({ text, asUser: true })
@@ -129,7 +140,8 @@ export const register: Register = on => {
       <Box flexDirection="column">
         <Box flexWrap="wrap" gap={1}>
           {list.map((c, i) => (
-            <Button key={`choice-${i}`} label={c} onPress={() => void choose($, c)} />
+            // Only the label is Fraktur; the click sends the plain choice.
+            <Button key={`choice-${i}`} label={fraktur(c)} onPress={() => void choose($, c)} />
           ))}
         </Box>
         {below}

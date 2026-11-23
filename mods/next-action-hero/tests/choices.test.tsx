@@ -135,13 +135,33 @@ describe('the band', () => {
     await $.turn.complete({ answer: 'Should I push it?', durationMs: 1, isAborted: false, turnId: 't1', reason: 'answer' })
 
     const band = await $.ui.mount({ ...BAND, surface: 'desktop' })
-    expect(await band.find({ type: 'Button', key: 'choice-0', text: 'Yes' })).toBeDefined()
-    expect(await band.find({ type: 'Button', key: 'choice-1', text: 'No' })).toBeDefined()
+    expect(await band.find({ type: 'Button', key: 'choice-0', text: '𝔜𝔢𝔰' })).toBeDefined()
+    expect(await band.find({ type: 'Button', key: 'choice-1', text: '𝔑𝔬' })).toBeDefined()
 
     await band.press({ key: 'choice-0' })
     for (let i = 0; i < 50 && !sent.length; i++) await Promise.resolve()
     expect(sent).toEqual(['Yes'])
     expect(await band.find({ type: 'Button', key: 'choice-0' })).toBeUndefined()
+    await band.unmount()
+  })
+
+  test('labels are in Fraktur, gap capitals included, while a click sends the plain text', async ($, on) => {
+    const sent: string[] = []
+    on('turn.complete', () => ({ text: '' }))
+    on('prompt.submit', (_, e) => {
+      sent.push(e.text)
+      return { text: e.text }
+    })
+
+    await $.turn.complete({ answer: 'Pick one: Rebase or Close 18.', durationMs: 1, isAborted: false, turnId: 't1', reason: 'answer' })
+
+    const band = await $.ui.mount({ ...BAND, surface: 'desktop' })
+    expect(await band.find({ type: 'Button', key: 'choice-0', text: 'ℜ𝔢𝔟𝔞𝔰𝔢' })).toBeDefined()
+    expect(await band.find({ type: 'Button', key: 'choice-1', text: 'ℭ𝔩𝔬𝔰𝔢 18' })).toBeDefined()
+
+    await band.press({ key: 'choice-1' })
+    for (let i = 0; i < 50 && !sent.length; i++) await Promise.resolve()
+    expect(sent).toEqual(['Close 18'])
     await band.unmount()
   })
 
