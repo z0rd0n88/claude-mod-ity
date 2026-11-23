@@ -104,13 +104,13 @@ Or load it from a clone, in the `env` block of `~/.claude/settings.json`:
 
 The command is queued like a typed one, so a click mid-turn compacts when the turn ends. Haiku reads the newest ~400,000 characters of the transcript (about 100k tokens); on a longer session the oldest part is left out of the summary. If Haiku returns nothing, no `/compact` is sent and a toast says why.
 
-`github-panel` draws the same footer slot and does not pass it on, so with both loaded, `compact-courier` should load first or its button is hidden: name it first in `CLAUDE_CODE_PLUGIN_DIRS`. This follows from how mods wrap each other in load order; it has not been tried live.
+`github-panel` (0.1.1 and later) draws the same footer slot and passes it on with `next`, so both buttons draw in either load order (seen live in Desktop, 2026-11-20).
 
 ## fraktur-footer
 
 Draws the prompt footer's mode labels (`focus`, `memory paused`) in the same Fraktur letters as the GH and Compact buttons: `𝔣𝔬𝔠𝔲𝔰`. The labels are rewritten before the engine draws them, so each shows once, in place. Digits and punctuation have no Fraktur form and stay as they are.
 
-The model name and effort ("Fable 5.2 High") are not touched: the app draws them itself, and none of the engine's render slots reaches them.
+The model name and effort ("Opus 5.5 High") and the permission mode ("Auto") are not touched: they are the app's own buttons, and none of the engine's render slots reaches them. With no mode label on, the mod changes nothing you can see.
 
 Install, at the Claude Code prompt:
 
