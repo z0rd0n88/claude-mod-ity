@@ -2,6 +2,30 @@
 
 Claude Code mods. They are commodities. Tested with Claude Code 2.1.316.
 
+## Where a mod loads
+
+A mod loads only in sessions that can see the place it was installed. Each mod below gives two ways to install; both are tied to one machine. To have a mod in every session, cloud ones included, save it to your claude.ai account.
+
+| How you add it | Sessions that get it |
+|---|---|
+| **Customize > Plugins > Add > Add marketplace** in claude.ai or Claude Desktop, with `z0rd0n88/claude-mod-ity`, then add the mod | Saved to your claude.ai account, not to a machine. Cloud sessions load the plugins your account holds. |
+| `/plugin install <mod> --marketplace z0rd0n88/claude-mod-ity` in a terminal | Sessions on that machine only. It is not added to your account. |
+| `CLAUDE_CODE_PLUGIN_DIRS` in the `env` block of `~/.claude/settings.json` | Local sessions on that machine only. An SSH session does not apply that `env` block, so it loads nothing from it. |
+
+A cloud session runs in a fresh container. It does not read the `~/.claude/settings.json` on your machine, has none of the plugins you installed from a terminal, and does not install the plugins a repository turns on in its `.claude/settings.json`. On Claude Code 2.1.329, `claude plugin list` inside a cloud container shows one group, `Synced from claude.ai`.
+
+Which kind of session you are in is the environment shown in the row under the prompt box in Claude Desktop: Local, Cloud, SSH or WSL. A new session can start in a different one from the session you were in, and then it loads a different set of mods.
+
+The account route works: on Claude Code 2.1.331, `next-action-hero`, `github-panel` and `compact-courier` added under Customize > Plugins arrived in a cloud session as `<mod>@synced` and loaded.
+
+Loading is not drawing. A mod draws only where the app showing the session attaches as a drawing surface; where none does, its hooks and commands run and nothing it draws shows (`$.session.surfaces()` is empty). The docs' [Where mods run](https://code.claude.com/docs/en/plugins/mods/overview#where-mods-run) table says a cloud session draws nothing. That is out of date or incomplete. The same cloud session, on three days:
+
+- 2.1.329, open in a browser at claude.ai: `$.session.surfaces()` stayed `[]` and nothing drew.
+- 2.1.330: a client calling itself `desktop` attached for three seconds and asked for `SessionMode` and `AbovePrompt`.
+- 2.1.331: a `desktop` client attached as the session started and stayed, and `next-action-hero`'s buttons showed above the prompt.
+
+So a mod should read `$.session.surfaces()` and not assume a cloud session has a surface or lacks one. Remote Control, per the same table, draws only in the terminal on your machine.
+
 ## mod-divider
 
 Draws one dim line across the panel between the bands other mods show above the prompt, repeating a character you choose. With fewer than two mods showing there is nothing to divide, so it draws nothing.
