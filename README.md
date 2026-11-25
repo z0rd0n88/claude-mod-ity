@@ -125,3 +125,43 @@ Or load it from a clone, in the `env` block of `~/.claude/settings.json`:
 ```
 
 It passes every footer render on with `next`, so `github-panel` and `compact-courier` still draw their buttons.
+
+## Themes
+
+A theme is a mod that sets how the Claude Desktop app looks, with `$.theme.set`: colors, a backdrop and the style of the conversation's rows. Themes live in `themes/`, apart from the mods in `mods/`, and install the same way. The terminal draws no theme.
+
+Only one theme is active per session. Any mod's `$.theme.set` replaces the colors and backdrop an earlier call set, so load one theme mod at a time. Claude Code v2.1.324 or later is needed for colors, and v2.1.323 or later for the backdrop.
+
+### erowid
+
+A theme drawn after [erowid.org](https://erowid.org/psychoactives/psychoactives.shtml). The site has two faces and so does the theme: your Desktop app's mode picks one. Both share the maroon header.
+
+| | Dark mode | Light mode |
+|---|---|---|
+| Taken from | the index pages | the vault pages |
+| Page | black | gray-green `#e5e5e1` |
+| Links and accents | periwinkle `#aaaaff` | navy `#110066` |
+| Panels | `#111922` band, `#321929` header maroon | pale lavender-gray boxes |
+| Text | `#ccccdd` | black |
+
+What it copies from the site:
+
+- Georgia-style serif for headings, in the gold of the site's section titles; bold sans-serif body text.
+- Square boxes with a 2px border around your messages, and a flat bordered row for tool calls. No rounded corners, no frosted glass.
+- The header as a vector backdrop: the textured strip, the sun, "The Vaults of Erowid", and the row of maroon menu tabs. Erowid's logo and photos are images, which a backdrop can't hold, so the sun and tabs are redrawn as shapes and the tabs are not clickable.
+
+Install, at the Claude Code prompt:
+
+```
+/plugin install erowid --marketplace z0rd0n88/claude-mod-ity
+```
+
+Or load it from a clone, in the `env` block of `~/.claude/settings.json`:
+
+```json
+"CLAUDE_CODE_PLUGIN_DIRS": "/path/to/claude-mod-ity/themes/erowid"
+```
+
+Start a new session in the Desktop app's Code tab. The mod sets the theme again at every session start. To take it off, disable the plugin, or in **Settings**, search `code appearance` and select **Remove colors**.
+
+Checked with `claude plugin validate` and `claude plugin test` on Claude Code 2.1.326. A Claude Code build that doesn't take a message `style` still gets the colors and backdrop; the type and box styles need a build that does. Not yet looked at in the Desktop app: colors and spacing are taken from the site's own CSS, so judge the result there. Some of the design system's softer contrast lines fall under its own bar (borders on the black page), and Desktop still paints the theme.
