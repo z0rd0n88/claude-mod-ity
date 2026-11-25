@@ -34,6 +34,11 @@
       "name": "y2chaos",
       "source": "./themes/y2chaos",
       "description": "A loud Y2K-era Claude Desktop theme: a purple night with scanlines and a cream day, with an X-Files, Lone Star, Doug, Modern Life and file-sharing header."
+    },
+    {
+      "name": "erowid",
+      "source": "./themes/erowid",
+      "description": "A Claude Desktop theme drawn after erowid.org: black and periwinkle by night, gray-green and navy by day, with the maroon site header as a vector backdrop."
     }
   ]
 }

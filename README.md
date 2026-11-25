@@ -104,13 +104,13 @@ Or load it from a clone, in the `env` block of `~/.claude/settings.json`:
 
 The command is queued like a typed one, so a click mid-turn compacts when the turn ends. Haiku reads the newest ~400,000 characters of the transcript (about 100k tokens); on a longer session the oldest part is left out of the summary. If Haiku returns nothing, no `/compact` is sent and a toast says why.
 
-`github-panel` draws the same footer slot and does not pass it on, so with both loaded, `compact-courier` should load first or its button is hidden: name it first in `CLAUDE_CODE_PLUGIN_DIRS`. This follows from how mods wrap each other in load order; it has not been tried live.
+`github-panel` (0.1.1 and later) draws the same footer slot and passes it on with `next`, so both buttons draw in either load order (seen live in Desktop, 2026-11-20).
 
 ## fraktur-footer
 
 Draws the prompt footer's mode labels (`focus`, `memory paused`) in the same Fraktur letters as the GH and Compact buttons: `𝔣𝔬𝔠𝔲𝔰`. The labels are rewritten before the engine draws them, so each shows once, in place. Digits and punctuation have no Fraktur form and stay as they are.
 
-The model name and effort ("Fable 5.2 High") are not touched: the app draws them itself, and none of the engine's render slots reaches them.
+The model name and effort ("Opus 5.5 High") and the permission mode ("Auto") are not touched: they are the app's own buttons, and none of the engine's render slots reaches them. With no mode label on, the mod changes nothing you can see.
 
 Install, at the Claude Code prompt:
 
@@ -125,3 +125,46 @@ Or load it from a clone, in the `env` block of `~/.claude/settings.json`:
 ```
 
 It passes every footer render on with `next`, so `github-panel` and `compact-courier` still draw their buttons.
+
+## Themes
+
+A theme is a mod that sets how the Claude Desktop app looks, with `$.theme.set`: colors, a backdrop and the style of the conversation's rows. Themes live in `themes/`, apart from the mods in `mods/`, and install the same way. The terminal draws no theme.
+
+Only one theme is active per session. Any mod's `$.theme.set` replaces the colors and backdrop an earlier call set, so load one theme mod at a time. Claude Code v2.1.324 or later is needed for colors, and v2.1.323 or later for the backdrop.
+
+### erowid
+
+A theme drawn after [erowid.org](https://erowid.org/psychoactives/psychoactives.shtml). The site has two faces and so does the theme: your Desktop app's mode picks one. Both share the maroon header.
+
+| | Dark mode | Light mode |
+|---|---|---|
+| Taken from | the index pages | the vault pages |
+| Page | black | gray-green `#e5e5e1` |
+| Links and accents | periwinkle `#aaaaff` | navy `#110066` |
+| Panels | `#111922` band, `#321929` header maroon | pale lavender-gray boxes |
+| Text | `#ccccdd` | black |
+
+What it copies from the site:
+
+- Georgia-style serif for headings, in the gold of the site's section titles; bold sans-serif body text.
+- Square boxes with a 2px border around your messages, and a flat bordered row for tool calls in the sage green of the site's link lists (`#88a171`). No rounded corners.
+- The header as a vector backdrop: the textured strip, the sun, "The Vaults of Erowid", the row of maroon menu tabs, and three small medallions where the site has its header photos. It is anchored to the top left, so a narrow pane still shows the sun, the name and the first tabs. The app's own panels are see-through, with no blur, so the header shows behind its bars.
+- Art in the margins: four mandalas at the far left and right, as on the Mind & Spirit pages. They are faint, and they show only when the window is wider than about 1100px, so they never sit under the text in a narrow pane.
+
+Erowid's logo and art are images, which a backdrop can't hold, so the sun, the mandalas and the tabs are redrawn as shapes, and the tabs are not clickable.
+
+Install, at the Claude Code prompt:
+
+```
+/plugin install erowid --marketplace z0rd0n88/claude-mod-ity
+```
+
+Or load it from a clone, in the `env` block of `~/.claude/settings.json`:
+
+```json
+"CLAUDE_CODE_PLUGIN_DIRS": "/path/to/claude-mod-ity/themes/erowid"
+```
+
+Start a new session in the Desktop app's Code tab. The mod sets the theme again at every session start. To take it off, disable the plugin, or in **Settings**, search `code appearance` and select **Remove colors**.
+
+Checked with `claude plugin validate` and `claude plugin test` on Claude Code 2.1.326. A Claude Code build that doesn't take a message `style` still gets the colors and backdrop; the type and box styles need a build that does. Not yet looked at in the Desktop app: colors and spacing are taken from the site's own CSS, so judge the result there. Some of the design system's softer contrast lines fall under its own bar (borders on the black page), and Desktop still paints the theme.

@@ -4,7 +4,8 @@ Verified by hand on Claude Code 2.1.309 to 2.1.317, Claude Desktop on Windows wi
 
 | Slot | Desktop draws it | Pressable | Gotcha |
 |---|---|---|---|
-| `SessionMode` (prompt footer, right of the model name) | yes | `Button` with text children | Draws no images: an `Svg` comes out as an empty frame. Use a glyph. The engine's own labels (`focus`, `memory paused`) come from `e.props.modes`; render them after yours. |
+| `SessionMode` (prompt footer, left of the model and permission-mode buttons) | yes | `Button` with text children | Draws no images: an `Svg` comes out as an empty frame. Use a glyph. The engine's own labels (`focus`, `memory paused`) come from `e.props.modes`; render them after yours. |
+| Model picker ("Opus 5.5 High"), permission-mode picker ("Auto") | no slot | – | The app's own buttons, right of `SessionMode`. No mod can restyle or replace them: a probe mod's `SessionMode` output drew left of them, and the window's accessibility tree lists them as separate app buttons (checked 2026-11-23). |
 | `AbovePrompt` (band above the prompt) | yes | `Button` | The hook must `const below = await next(e)` and render `{below}`, or every other mod's band disappears. |
 | `PromptHint` | no | – | Validates and tests, never drawn. |
 | `Pane` (`$.ui.open`) | yes, right-hand panel | `Button`, `Link` | `$.ui.panes()` lists open panes; toggle with `$.ui.close`. |
