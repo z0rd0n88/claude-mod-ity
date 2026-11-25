@@ -147,8 +147,11 @@ A theme drawn after [erowid.org](https://erowid.org/psychoactives/psychoactives.
 What it copies from the site:
 
 - Georgia-style serif for headings, in the gold of the site's section titles; bold sans-serif body text.
-- Square boxes with a 2px border around your messages, and a flat bordered row for tool calls. No rounded corners, no frosted glass.
-- The header as a vector backdrop: the textured strip, the sun, "The Vaults of Erowid", and the row of maroon menu tabs. Erowid's logo and photos are images, which a backdrop can't hold, so the sun and tabs are redrawn as shapes and the tabs are not clickable.
+- Square boxes with a 2px border around your messages, and a flat bordered row for tool calls in the sage green of the site's link lists (`#88a171`). No rounded corners.
+- The header as a vector backdrop: the textured strip, the sun, "The Vaults of Erowid", the row of maroon menu tabs, and three small medallions where the site has its header photos. It is anchored to the top left, so a narrow pane still shows the sun, the name and the first tabs. The app's own panels are see-through, with no blur, so the header shows behind its bars.
+- Art in the margins: four mandalas at the far left and right, as on the Mind & Spirit pages. They are faint, and they show only when the window is wider than about 1100px, so they never sit under the text in a narrow pane.
+
+Erowid's logo and art are images, which a backdrop can't hold, so the sun, the mandalas and the tabs are redrawn as shapes, and the tabs are not clickable.
 
 Install, at the Claude Code prompt:
 

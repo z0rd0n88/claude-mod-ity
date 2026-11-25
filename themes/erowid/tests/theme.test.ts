@@ -32,7 +32,7 @@ describe('erowid', () => {
 
     // A build that takes a style gets it in this same call; one that does not gets the call without it
     expect(sets).toHaveLength(1)
-    expect(sets[0].backdrop).toEqual({ scene: 'erowid-header', glass: false })
+    expect(sets[0].backdrop).toEqual({ scene: 'erowid-header', glass: { blur: 0, opacity: 0.6 } })
     expect(sets[0].colors).toBeDefined()
   })
 
@@ -52,7 +52,7 @@ describe('erowid', () => {
 
     expect(sets).toHaveLength(1)
     expect(sets[0].style).toBeUndefined()
-    expect(sets[0].backdrop).toEqual({ scene: 'erowid-header', glass: false })
+    expect(sets[0].backdrop).toEqual({ scene: 'erowid-header', glass: { blur: 0, opacity: 0.6 } })
     expect(sets[0].colors).toBeDefined()
   })
 
@@ -87,6 +87,17 @@ describe('erowid', () => {
 
     expect(svg).toBeDefined()
     expect(String((svg?.props as { source: string }).source)).toContain('THE VAULTS OF')
+  })
+
+  test('keeps the banner in view in a narrow pane and draws the margin art only when there is room', async $ => {
+    const mounted = await $.ui.mount(backdrop('erowid', 'erowid-header'))
+    const source = String(((await mounted.find({ type: 'Svg' }))?.props as { source: string }).source)
+
+    // Anchored to the left, so cropping a narrow pane takes the right side and not the sun and the name
+    expect(source).toContain('preserveAspectRatio="xMinYMin slice"')
+    // The art is one group, hidden by a width query
+    expect(source).toContain('<g class="art">')
+    expect(source).toContain('@media (max-width: 1100px) { .art { display: none; } }')
   })
 
   test('leaves another mod’s backdrop alone', async ($, on) => {
