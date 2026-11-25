@@ -29,6 +29,11 @@
       "name": "fraktur-footer",
       "source": "./mods/fraktur-footer",
       "description": "Draws the prompt footer's mode labels (focus, memory paused) in the Fraktur letters of the GH and Compact buttons."
+    },
+    {
+      "name": "y2chaos",
+      "source": "./themes/y2chaos",
+      "description": "A loud Y2K-era Claude Desktop theme: a purple night with scanlines and a cream day, with an X-Files, Lone Star, Doug, Modern Life and file-sharing header."
     }
   ]
 }
