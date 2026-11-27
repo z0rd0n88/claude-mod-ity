@@ -81,12 +81,16 @@ describe('y2chaos', () => {
     expect(lines).toEqual(['the terminal draws no theme'])
   })
 
-  test('draws the header strip for its own scene on Desktop', async $ => {
+  test('draws alien heads and taglines in the margins, with no header, for its own scene on Desktop', async $ => {
     const mounted = await $.ui.mount(backdrop('y2chaos', 'y2chaos-header'))
     const svg = await mounted.find({ type: 'Svg' })
+    const source = String((svg?.props as { source: string }).source)
 
     expect(svg).toBeDefined()
-    expect(String((svg?.props as { source: string }).source)).toContain('Y2CHAOS')
+    expect(source).toContain('THE TRUTH')
+    expect(source).toContain('fill="#39ff14" stroke="#ff2fb3"')
+    // The old header's logo is gone
+    expect(source).not.toContain('Y2CHAOS')
   })
 
   test('keeps the banner in view in a narrow pane and draws the margin art only when there is room', async $ => {
